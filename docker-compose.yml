@@ -1,0 +1,19 @@
+name: nest-typeorm
+version: '3'
+services:
+  postgres:
+    image: postgres
+    container_name: 'nest-typeorm-postgres'
+    environment:
+      POSTGRES_USER: 'nest-typeorm'
+      POSTGRES_PASSWORD: 'nest-typeorm'
+      POSTGRES_DB: 'nest-typeorm'
+    ports:
+      - 5432:5432
+    restart: always
+  redis:
+    image: redis
+    container_name: 'nest-typeorm-redis'
+    ports:
+      - 6379:6379
+    restart: always
