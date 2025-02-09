@@ -1,5 +1,7 @@
 <h4 align="right"><strong>English</strong> | <a href="https://github.com/Penggeor/nestjs-template/blob/main/README_CN.md">简体中文</a>
 
+![NestJS Template](./res/cover.jpg)
+
 # NestJS Template
 
 ## Tech Stack

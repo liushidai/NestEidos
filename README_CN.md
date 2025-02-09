@@ -1,5 +1,7 @@
 <h4 align="right"><a href="https://github.com/Penggeor/nestjs-template">English</a> | <strong>简体中文</strong></h4>
 
+![NestJS 模板](./res/cover.jpg)
+
 # NestJS 模板
 
 ## 技术栈
