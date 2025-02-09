@@ -1,6 +1,6 @@
+<h4 align="right"><strong>English</strong> | <a href="https://github.com/Penggeor/nestjs-template/blob/main/README_CN.md">简体中文</a>
+
 # NestJS Template
-
-
 
 ## Tech Stack
 - [Nest.js](https://nestjs.com/): A framework for building efficient, scalable Node.js applications.
