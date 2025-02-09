@@ -1,58 +1,53 @@
-# NestJS + TypeORM
+# NestJS Template
 
-## 技术栈
-- Nest.js：一个用于构建高效、可扩展的 Node.js 应用程序的框架。
-- TypeORM：一个用于连接和操作数据库的 ORM 工具。
-- PostgreSQL：一个开源的关系型数据库管理系统。
-- Redis：一个开源的内存数据结构存储，用作数据库、缓存和消息代理。
-- Swagger：一个用于生成 API 文档的工具。
-> Swagger 的 UI 访问界面为 `http://localhost:3000/api`，如果是用 APIFox 或者 Postman ，则可调用 `http://localhost:3000/api-json` 导入
 
-## 运行项目
 
-### 运行数据库和 redis
+## Tech Stack
+- [Nest.js](https://nestjs.com/): A framework for building efficient, scalable Node.js applications.
+- [TypeORM](https://typeorm.io/): An ORM tool for database connection and operations.
+- [PostgreSQL](https://www.postgresql.org/): An open-source relational database management system.
+- [Redis](https://redis.io/): An open-source in-memory data structure store, used as a database, cache, and message broker.
+- [Swagger](https://swagger.io/): A tool for generating API documentation.
+> Swagger UI is accessible at `http://localhost:3000/api`. If you're using APIFox or Postman, you can import the API documentation from `http://localhost:3000/api-json`
+
+## Running the Project
+
+### Start Database and Redis
 
 ```bash
 docker compose up -f ./docker-compose.yml -d
 ```
 
-> Docker Compose 是 Docker 的编排工具，用于定义和运行多容器 Docker 应用程序，跑数据库镜像比较方便。
+> Docker Compose is a Docker orchestration tool used to define and run multi-container Docker applications, making it convenient to run database images.
 
-### 安装依赖
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 启动项目
+### Start the Project
 
 ```bash
 npm run start:dev
 ```
 
-### 访问项目
+### Access the Project
 
-1. 通过命令终端访问
+1. Via Terminal
 
 ```bash
 curl --location --request GET 'http://localhost:3000'
 ```
 
-2. 通过浏览器访问
+2. Via Browser
 
 ```bash
 http://localhost:3000
 ```
 
-都可以看到返回了 `Hello World!`
+Both methods will return `Hello World!`
 
+## Contact the Author
 
-## 项目结构
-
-```bash
-tree -L 2
-```
-
-## 联系作者
-
-如果你遇到任何问题，除了 GitHub Issue 之外，你可以在 wukaipeng.com 上找到我的联系方式。
+If you encounter any issues, besides GitHub Issues, you can find my contact information at [wukaipeng.com](https://wukaipeng.com/). 
