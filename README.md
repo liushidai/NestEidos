@@ -20,7 +20,7 @@
 docker compose up -f ./docker-compose.yml -d
 ```
 
-> Docker Compose is a Docker orchestration tool used to define and run multi-container Docker applications, making it convenient to run database images.
+> To stop the docker containers, run `docker compose -f ./docker-compose.yml down`
 
 ### Install Dependencies
 

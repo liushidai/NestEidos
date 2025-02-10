@@ -20,7 +20,7 @@
 docker compose up -f ./docker-compose.yml -d
 ```
 
-> Docker Compose 是 Docker 的编排工具，用于定义和运行多容器 Docker 应用程序，跑数据库镜像比较方便。
+> 关闭 docker 容器可运行 `docker compose -f ./docker-compose.yml down `
 
 ### 安装依赖
 
