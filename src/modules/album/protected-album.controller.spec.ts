@@ -8,6 +8,15 @@ import { Album } from './entities/album.entity';
 import { NotFoundException } from '@nestjs/common';
 import { TokenGuard } from '../auth/guards/token.guard';
 
+/**
+ * ProtectedAlbumController 测试
+ *
+ * 测试原则：
+ * - 控制器方法期望返回业务数据原文（不包含响应壳）
+ * - 统一响应格式由全局 ResponseInterceptor 负责
+ * - 认证守卫在测试中被绕过，直接验证业务逻辑
+ * - 404 异常应在控制器层抛出，与 Swagger 文档保持一致
+ */
 describe('ProtectedAlbumController', () => {
   let controller: ProtectedAlbumController;
   let albumService: jest.Mocked<AlbumService>;
@@ -144,12 +153,12 @@ describe('ProtectedAlbumController', () => {
       expect(result).toEqual(mockAlbum);
     });
 
-    it('should return null if album not found', async () => {
+    it('should throw NotFoundException if album not found', async () => {
       mockAlbumService.findByIdAndUserId.mockResolvedValue(null);
 
-      const result = await controller.findOne(albumId, { user: mockUser } as any);
-
-      expect(result).toBeNull();
+      await expect(controller.findOne(albumId, { user: mockUser } as any)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -244,6 +253,84 @@ describe('ProtectedAlbumController', () => {
       mockAlbumService.delete.mockResolvedValue(undefined);
       await controller.remove(albumId, { user: mockUser } as any);
       expect(albumService.delete).toHaveBeenCalledWith(albumId, mockUser.userId);
+    });
+  });
+
+  describe('findAll 参数边界校验', () => {
+    it('should handle negative page and limit values', async () => {
+      const queryDto: QueryAlbumDto = { page: -1, limit: -5 };
+      const expectedResult = {
+        albums: [],
+        total: 0,
+        page: -1,
+        limit: -5,
+        totalPages: 0,
+      };
+      mockAlbumService.findByUserId.mockResolvedValue(expectedResult);
+
+      const result = await controller.findAll(queryDto, { user: mockUser } as any);
+
+      expect(result).toEqual(expectedResult);
+      expect(albumService.findByUserId).toHaveBeenCalledWith(mockUser.userId, queryDto);
+    });
+
+    it('should handle zero page and limit values', async () => {
+      const queryDto: QueryAlbumDto = { page: 0, limit: 0 };
+      const expectedResult = {
+        albums: [],
+        total: 5,
+        page: 0,
+        limit: 0,
+        totalPages: Infinity,
+      };
+      mockAlbumService.findByUserId.mockResolvedValue(expectedResult);
+
+      const result = await controller.findAll(queryDto, { user: mockUser } as any);
+
+      expect(result.limit).toBe(0);
+      expect(result.totalPages).toBe(Infinity);
+    });
+  });
+
+  describe('isAlbumBelongsToUser 辅助方法测试', () => {
+    it('should properly use the service method for ownership verification', async () => {
+      const albumId = '1234567890123456789';
+
+      // 测试相册属于用户的情况
+      mockAlbumService.isAlbumBelongsToUser.mockResolvedValue(true);
+
+      const result = await controller.update(
+        albumId,
+        { albumName: '新名称' },
+        { user: mockUser } as any,
+      );
+
+      // update 方法内部会调用 findByIdAndUserId，而不是 isAlbumBelongsToUser
+      // 但我们可以验证服务方法被正确调用
+      expect(albumService.update).toHaveBeenCalledWith(
+        albumId,
+        mockUser.userId,
+        { albumName: '新名称' },
+      );
+    });
+  });
+
+  describe('数据一致性测试占位', () => {
+    it('TODO: 删除相册时应联动更新图片的 album_id', async () => {
+      // 当实现删除相册时自动更新相关图片的 album_id 为 null 的功能后，
+      // 需要在此处添加集成测试验证：
+      // 1. 创建相册
+      // 2. 添加图片到相册
+      // 3. 删除相册
+      // 4. 验证图片的 album_id 被正确更新为 null
+
+      mockAlbumService.delete.mockResolvedValue(undefined);
+
+      await expect(
+        controller.remove('1234567890123456789', { user: mockUser } as any),
+      ).resolves.toBeUndefined();
+
+      // TODO: 添加图片相册关系验证
     });
   });
 

@@ -125,6 +125,9 @@ export class ProtectedAlbumController {
   async findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
     const album = await this.albumService.findByIdAndUserId(id, userId);
+    if (!album) {
+      throw new NotFoundException('相册不存在或无权限操作');
+    }
     return album;
   }
 

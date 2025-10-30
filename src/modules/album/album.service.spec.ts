@@ -478,6 +478,63 @@ describe('AlbumService', () => {
     });
   });
 
+  describe('isAlbumBelongsToUser 辅助方法详细测试', () => {
+    it('should return true for valid album ownership', async () => {
+      const albumId = '1234567890123456789';
+      const userId = '1234567890123456788';
+
+      mockRepository.findOneBy.mockResolvedValue(mockAlbum);
+
+      const result = await service.isAlbumBelongsToUser(albumId, userId);
+
+      expect(result).toBe(true);
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        id: albumId,
+        userId: userId,
+      });
+    });
+
+    it('should return false when album belongs to different user', async () => {
+      const albumId = '1234567890123456789';
+      const wrongUserId = 'wrong-user-id';
+
+      mockRepository.findOneBy.mockResolvedValue(null);
+
+      const result = await service.isAlbumBelongsToUser(albumId, wrongUserId);
+
+      expect(result).toBe(false);
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        id: albumId,
+        userId: wrongUserId,
+      });
+    });
+
+    it('should return false when album does not exist', async () => {
+      const nonExistentAlbumId = 'non-existent-id';
+      const userId = '1234567890123456788';
+
+      mockRepository.findOneBy.mockResolvedValue(null);
+
+      const result = await service.isAlbumBelongsToUser(nonExistentAlbumId, userId);
+
+      expect(result).toBe(false);
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        id: nonExistentAlbumId,
+        userId: userId,
+      });
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const albumId = '1234567890123456789';
+      const userId = '1234567890123456788';
+      const dbError = new Error('Database connection failed');
+
+      mockRepository.findOneBy.mockRejectedValue(dbError);
+
+      await expect(service.isAlbumBelongsToUser(albumId, userId)).rejects.toThrow(dbError);
+    });
+  });
+
   describe('Performance and integration', () => {
     it('should handle large result sets efficiently', async () => {
       const queryDto: QueryAlbumDto = { limit: 100 };
