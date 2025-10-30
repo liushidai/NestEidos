@@ -1,7 +1,7 @@
 import { SecureIdUtil } from './secure-id.util';
 import { ConfigService } from '@nestjs/config';
 
-describe('SecureIdUtil', () => {
+describe('SecureIdUtil (Feistel PRP)', () => {
   let secureIdUtil: SecureIdUtil;
   let mockConfigService: jest.Mocked<ConfigService>;
 
@@ -18,8 +18,13 @@ describe('SecureIdUtil', () => {
       get: jest.fn(),
     } as unknown as jest.Mocked<ConfigService>;
 
-    // 设置密钥配置
-    mockConfigService.get.mockReturnValue(`hex:${validHexKey}`);
+    // 设置新的密钥配置项
+    mockConfigService.get.mockImplementation((key: string) => {
+      if (key === 'SECURE_ID_SECRET_KEY') {
+        return `hex:${validHexKey}`;
+      }
+      return undefined;
+    });
 
     secureIdUtil = SecureIdUtil.getInstance(mockConfigService);
   });
@@ -64,7 +69,7 @@ describe('SecureIdUtil', () => {
     });
   });
 
-  describe('加密安全性测试', () => {
+  describe('Feistel PRP 安全性测试', () => {
     it('相同的ID编码结果应该保持一致', () => {
       const snowflakeId = 1234567890123456789n;
       const encoded1 = secureIdUtil.encode(snowflakeId);
@@ -82,14 +87,42 @@ describe('SecureIdUtil', () => {
       expect(encoded1).not.toBe(encoded2);
     });
 
-    it('连续的ID应该产生不可预测的编码结果', () => {
-      const ids = Array.from({ length: 10 }, (_, i) => BigInt(i + 1));
+    it('连续ID的编码应该呈现非线性特征', () => {
+      const ids = Array.from({ length: 100 }, (_, i) => BigInt(i + 1));
       const encodedIds = secureIdUtil.encodeBatch(ids);
 
-      // 检查编码结果不是简单的递增模式
+      // 检查编码结果不呈现单调递增特性
+      let monotonicCount = 0;
       for (let i = 1; i < encodedIds.length; i++) {
-        expect(encodedIds[i]).not.toBe(encodedIds[i - 1] + '1');
+        if (encodedIds[i] > encodedIds[i - 1]) {
+          monotonicCount++;
+        }
       }
+
+      // 非线性特性：单调递增的比例应该远低于100%
+      expect(monotonicCount).toBeLessThan(encodedIds.length * 0.7);
+    });
+
+    it('不同密钥对同一ID应该产生不同编码', () => {
+      const testId = 1234567890123456789n;
+      const encoded1 = secureIdUtil.encode(testId);
+
+      // 创建不同密钥的实例
+      (SecureIdUtil as any).instance = null;
+      const differentKey = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+
+      const differentConfigService = {
+        get: jest.fn().mockReturnValue(`hex:${differentKey}`),
+      } as unknown as jest.Mocked<ConfigService>;
+
+      const differentUtil = SecureIdUtil.getInstance(differentConfigService);
+      const encoded2 = differentUtil.encode(testId);
+
+      expect(encoded1).not.toBe(encoded2);
+    });
+
+    it('Feistel轮数应该是12轮', () => {
+      expect(secureIdUtil.getRounds()).toBe(12);
     });
   });
 
@@ -120,7 +153,7 @@ describe('SecureIdUtil', () => {
     });
   });
 
-  describe('错误处理测试', () => {
+  describe('输入校验测试', () => {
     it('编码负数ID应该抛出异常', () => {
       expect(() => {
         secureIdUtil.encode(-1n);
@@ -136,19 +169,38 @@ describe('SecureIdUtil', () => {
     it('解码空字符串应该抛出异常', () => {
       expect(() => {
         secureIdUtil.decode('');
-      }).toThrow('Invalid encoded ID');
+      }).toThrow('Invalid encoded ID: must be a non-empty string');
+    });
+
+    it('解码超长字符串应该抛出异常', () => {
+      const longString = 'a'.repeat(12); // 超过11字符
+      expect(() => {
+        secureIdUtil.decode(longString);
+      }).toThrow('Invalid encoded ID: length must be between 1 and 11 characters');
     });
 
     it('解码null应该抛出异常', () => {
       expect(() => {
         secureIdUtil.decode(null as any);
-      }).toThrow('Invalid encoded ID');
+      }).toThrow('Invalid encoded ID: must be a non-empty string');
     });
 
-    it('解码无效字符应该抛出异常', () => {
+    it('解码undefined应该抛出异常', () => {
+      expect(() => {
+        secureIdUtil.decode(undefined as any);
+      }).toThrow('Invalid encoded ID: must be a non-empty string');
+    });
+
+    it('解码无效Base62字符应该抛出异常', () => {
       expect(() => {
         secureIdUtil.decode('abc@#$%');
-      }).toThrow('Invalid or corrupted secure ID');
+      }).toThrow('Invalid encoded ID: contains invalid Base62 characters');
+    });
+
+    it('解码包含空格的字符串应该抛出异常', () => {
+      expect(() => {
+        secureIdUtil.decode('abc def');
+      }).toThrow('Invalid encoded ID: contains invalid Base62 characters');
     });
 
     it('解码损坏的数据应该抛出异常', () => {
@@ -159,17 +211,25 @@ describe('SecureIdUtil', () => {
 
       expect(() => {
         secureIdUtil.decode(corrupted);
-      }).toThrow('Invalid or corrupted secure ID');
+      }).toThrow('Invalid encoded ID: contains invalid Base62 characters');
+    });
+
+    it('isValidBase62应该正确验证字符集', () => {
+      expect(secureIdUtil.isValidBase62('ABCdef123')).toBe(true);
+      expect(secureIdUtil.isValidBase62('abc@#$')).toBe(false);
+      expect(secureIdUtil.isValidBase62('abc def')).toBe(false);
+      expect(secureIdUtil.isValidBase62('')).toBe(false);
+      expect(secureIdUtil.isValidBase62('中文')).toBe(false);
     });
   });
 
   describe('密钥管理测试', () => {
-    it('应该验证密钥有效性', () => {
+    it('应该验证HMAC密钥有效性', () => {
       expect(secureIdUtil.isKeyValid()).toBe(true);
       expect(secureIdUtil.getKeyLength()).toBe(32);
     });
 
-    it('支持hex格式密钥', () => {
+    it('支持新配置项SECURE_ID_SECRET_KEY', () => {
       // 重置单例以创建新实例
       (SecureIdUtil as any).instance = null;
 
@@ -178,6 +238,25 @@ describe('SecureIdUtil', () => {
       } as unknown as jest.Mocked<ConfigService>;
 
       testConfigService.get.mockReturnValue(`hex:${validHexKey}`);
+      const util = SecureIdUtil.getInstance(testConfigService);
+      expect(util.isKeyValid()).toBe(true);
+    });
+
+    it('兼容旧配置项SECRET_KEY', () => {
+      // 重置单例以创建新实例
+      (SecureIdUtil as any).instance = null;
+
+      const testConfigService = {
+        get: jest.fn(),
+      } as unknown as jest.Mocked<ConfigService>;
+
+      testConfigService.get.mockImplementation((key: string) => {
+        if (key === 'SECRET_KEY') {
+          return `hex:${validHexKey}`;
+        }
+        return undefined;
+      });
+
       const util = SecureIdUtil.getInstance(testConfigService);
       expect(util.isKeyValid()).toBe(true);
     });
@@ -195,6 +274,21 @@ describe('SecureIdUtil', () => {
       expect(util.isKeyValid()).toBe(true);
     });
 
+    it('应该自动规范化非32字节密钥', () => {
+      // 重置单例以创建新实例
+      (SecureIdUtil as any).instance = null;
+
+      const testConfigService = {
+        get: jest.fn(),
+      } as unknown as jest.Mocked<ConfigService>;
+
+      const shortKey = '1234567890abcdef'; // 16字节
+      testConfigService.get.mockReturnValue(`hex:${shortKey}`);
+      const util = SecureIdUtil.getInstance(testConfigService);
+      expect(util.isKeyValid()).toBe(true);
+      expect(util.getKeyLength()).toBe(32);
+    });
+
     it('缺少密钥配置应该抛出异常', () => {
       // 重置单例以创建新实例
       (SecureIdUtil as any).instance = null;
@@ -206,21 +300,7 @@ describe('SecureIdUtil', () => {
       testConfigService.get.mockReturnValue(undefined);
       expect(() => {
         SecureIdUtil.getInstance(testConfigService);
-      }).toThrow('SECRET_KEY environment variable is required');
-    });
-
-    it('密钥长度不足应该抛出异常', () => {
-      // 重置单例以创建新实例
-      (SecureIdUtil as any).instance = null;
-
-      const testConfigService = {
-        get: jest.fn(),
-      } as unknown as jest.Mocked<ConfigService>;
-
-      testConfigService.get.mockReturnValue('12345678'); // 太短的密钥
-      expect(() => {
-        SecureIdUtil.getInstance(testConfigService);
-      }).toThrow('SECRET_KEY must be 32 bytes');
+      }).toThrow('SECURE_ID_SECRET_KEY environment variable is required');
     });
   });
 
@@ -279,6 +359,66 @@ describe('SecureIdUtil', () => {
     });
   });
 
+  describe('Feistel 网络特性测试', () => {
+    it('应该具有雪崩效应（小比特变化导致大变化）', () => {
+      // 选择两个相邻的ID
+      const id1 = 1234567890123456789n;
+      const id2 = id1 + 1n;
+
+      const encoded1 = secureIdUtil.encode(id1);
+      const encoded2 = secureIdUtil.encode(id2);
+
+      // 计算汉明距离（字符级的差异）
+      let distance = 0;
+      const len = Math.max(encoded1.length, encoded2.length);
+
+      for (let i = 0; i < len; i++) {
+        if (encoded1[i] !== encoded2[i]) {
+          distance++;
+        }
+      }
+
+      // 由于 Feistel 的扩散特性，单个比特变化应该导致多个字符变化
+      expect(distance).toBeGreaterThan(1);
+    });
+
+    it('应该具有完美的可逆性', () => {
+      const testIds = [
+        0n,
+        1n,
+        BigInt('2') ** BigInt('63') - 1n, // 最大63位值
+        1234567890123456789n,
+        BigInt('123456789012345678901234567890'), // 超出64位
+      ];
+
+      testIds.forEach(id => {
+        const encoded = secureIdUtil.encode(id);
+        const decoded = secureIdUtil.decode(encoded);
+
+        // 验证可逆性：对于超出64位的ID，应该只验证低64位一致
+        const expectedId = id & ((1n << 64n) - 1n);
+        expect(decoded).toBe(expectedId);
+      });
+    });
+
+    it('应该有良好的输出分布', () => {
+      const sampleSize = 1000;
+      const ids = Array.from({ length: sampleSize }, (_, i) => BigInt(i + 1));
+      const encodedIds = ids.map(id => secureIdUtil.encode(id));
+
+      // 计算第一个字符的分布
+      const charCount = new Map<string, number>();
+      encodedIds.forEach(id => {
+        const firstChar = id[0] || '';
+        charCount.set(firstChar, (charCount.get(firstChar) || 0) + 1);
+      });
+
+      // 应该使用较多的字符，分布相对均匀
+      expect(charCount.size).toBeGreaterThan(30);
+      console.log(`首字符分布: ${charCount.size} 种不同字符`);
+    });
+  });
+
   describe('性能测试', () => {
     it('编码性能测试', () => {
       const start = performance.now();
@@ -293,7 +433,7 @@ describe('SecureIdUtil', () => {
       const duration = end - start;
       const rate = count / (duration / 1000);
 
-      expect(rate).toBeGreaterThan(10000); // 每秒至少1万次编码
+      expect(rate).toBeGreaterThan(5000); // Feistel 更复杂，期望较低的性能
       console.log(`编码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
     });
 
@@ -312,13 +452,13 @@ describe('SecureIdUtil', () => {
       const duration = end - start;
       const rate = count / (duration / 1000);
 
-      expect(rate).toBeGreaterThan(10000); // 每秒至少1万次解码
+      expect(rate).toBeGreaterThan(5000); // Feistel 更复杂，期望较低的性能
       console.log(`解码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
     });
 
     it('往返转换性能测试', () => {
       const start = performance.now();
-      const count = 5000;
+      const count = 2000; // Feistel 较慢，减少测试数量
       const testIds = Array.from({ length: count }, (_, i) => BigInt(i + 1));
 
       for (const id of testIds) {
@@ -329,7 +469,7 @@ describe('SecureIdUtil', () => {
       const duration = end - start;
       const rate = count / (duration / 1000);
 
-      expect(rate).toBeGreaterThan(5000); // 每秒至少5000次往返
+      expect(rate).toBeGreaterThan(2000); // 期望适中的往返性能
       console.log(`往返转换 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
     });
   });
