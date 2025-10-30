@@ -3,10 +3,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { ConfigValidationService } from './config/config-validation.service';
 import 'reflect-metadata';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 在应用启动后立即进行配置校验
+  const configValidationService = app.get(ConfigValidationService);
+  configValidationService.validateAll();
 
   // Set global API prefix
   app.setGlobalPrefix('api');
