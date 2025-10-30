@@ -50,10 +50,16 @@ export class SnowflakeUtil {
     this.lastTimestamp = timestamp;
 
     // 使用 BigInt 进行位运算，避免 JavaScript 数字精度问题
-    const datacenterIdShift = 5n; // 数据中心ID左移位数
-    const workerIdShift = 5n + datacenterIdShift; // 机器ID左移位数
-    const timestampLeftShift = 12n + workerIdShift; // 时间戳左移位数
-    const sequenceMask = 4095n; // 序列号掩码
+    // 标准雪花算法位布局：timestamp(41) | datacenter(5) | worker(5) | sequence(12)
+    const sequenceBits = 12n;
+    const workerIdBits = 5n;
+    const datacenterIdBits = 5n;
+
+    const workerIdShift = sequenceBits; // 12n
+    const datacenterIdShift = sequenceBits + workerIdBits; // 17n
+    const timestampLeftShift = sequenceBits + workerIdBits + datacenterIdBits; // 22n
+
+    const sequenceMask = (1n << sequenceBits) - 1n; // 4095n = 0b111111111111
     const epoch = 1288834974657n; // 雪花算法纪元时间戳
 
     const id =
