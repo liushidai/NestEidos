@@ -14,13 +14,47 @@
 
 ## Running the Project
 
-### Start Database and Redis
+### Prerequisites
 
+Before running the project, ensure you have the following services installed and running:
+
+- **PostgreSQL** (version 12 or higher)
+- **Redis** (version 6 or higher)
+
+### Database Setup
+
+1. Create a PostgreSQL database:
 ```bash
-docker compose up -f ./docker-compose.yml -d
+# Connect to PostgreSQL and create database
+createdb nest_eidos
 ```
 
-> To stop the docker containers, run `docker compose -f ./docker-compose.yml down`
+2. Ensure Redis is running on your system:
+```bash
+# Check Redis status
+redis-cli ping
+```
+
+### Environment Configuration
+
+1. Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` file with your actual database and Redis configuration:
+```bash
+# Update database credentials
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=your_postgres_username
+DB_PASSWORD=your_postgres_password
+DB_DATABASE=nest_eidos
+
+# Update Redis configuration if needed
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
 
 ### Install Dependencies
 
