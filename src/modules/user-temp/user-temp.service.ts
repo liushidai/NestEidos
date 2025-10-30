@@ -1,18 +1,18 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import type { CreateUserDto } from './dto/create-user.dto';
 import type { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { UserTemp } from './entities/user-temp.entity';
 import type { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
-export class UserService {
+export class UserTempService {
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(UserTemp)
+    private userRepository: Repository<UserTemp>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<UserTemp> {
     // Check if email already exists
     const existingUser = await this.userRepository.findOneBy({
       email: createUserDto.email,
@@ -32,11 +32,11 @@ export class UserService {
     return this.userRepository.save(createUserDto);
   }
 
-  findAll(): Promise<User[]> {
+  findAll(): Promise<UserTemp[]> {
     return this.userRepository.find();
   }
 
-  findOne(id: number): Promise<User | null> {
+  findOne(id: number): Promise<UserTemp | null> {
     return this.userRepository.findOneBy({ id });
   }
 

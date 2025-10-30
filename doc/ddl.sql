@@ -1,5 +1,5 @@
 -- 用户表
-CREATE TABLE users (
+CREATE TABLE user (
     id BIGINT PRIMARY KEY,
     user_name VARCHAR(64) NOT NULL UNIQUE,
     pass_word VARCHAR(255) NOT NULL,
@@ -10,16 +10,16 @@ CREATE TABLE users (
 );
 
 -- 表注释
-COMMENT ON TABLE users IS '用户表';
+COMMENT ON TABLE user IS '用户表';
 
 -- 字段注释
-COMMENT ON COLUMN users.id IS '用户ID，由程序使用雪花算法生成';
-COMMENT ON COLUMN users.user_name IS '用户名，唯一';
-COMMENT ON COLUMN users.pass_word IS '密码，存储加密后的哈希值';
-COMMENT ON COLUMN users.user_type IS '用户类型：1-管理员，10-普通用户';
-COMMENT ON COLUMN users.user_status IS '用户状态：1-正常，2-封锁，默认为1';
-COMMENT ON COLUMN users.created_at IS '创建时间，由程序插入时提供';
-COMMENT ON COLUMN users.updated_at IS '更新时间，由程序在每次更新时提供';
+COMMENT ON COLUMN user.id IS '用户ID，由程序使用雪花算法生成';
+COMMENT ON COLUMN user.user_name IS '用户名，唯一';
+COMMENT ON COLUMN user.pass_word IS '密码，存储加密后的哈希值';
+COMMENT ON COLUMN user.user_type IS '用户类型：1-管理员，10-普通用户';
+COMMENT ON COLUMN user.user_status IS '用户状态：1-正常，2-封锁，默认为1';
+COMMENT ON COLUMN user.created_at IS '创建时间，由程序插入时提供';
+COMMENT ON COLUMN user.updated_at IS '更新时间，由程序在每次更新时提供';
 
 
 -- 相册表
@@ -36,7 +36,7 @@ COMMENT ON TABLE album IS '相册表';
 
 -- 字段注释
 COMMENT ON COLUMN album.id IS '相册ID，由程序使用雪花算法生成';
-COMMENT ON COLUMN album.user_id IS '所属用户ID，关联 users.id';
+COMMENT ON COLUMN album.user_id IS '所属用户ID，关联 user.id';
 COMMENT ON COLUMN album.album_name IS '相册名称';
 COMMENT ON COLUMN album.created_at IS '创建时间，由程序插入时提供';
 COMMENT ON COLUMN album.updated_at IS '更新时间，由程序在每次更新时提供';
@@ -71,7 +71,7 @@ COMMENT ON TABLE image IS '图片元数据表';
 
 -- 字段注释
 COMMENT ON COLUMN image.id IS '图片ID，由程序使用雪花算法生成';
-COMMENT ON COLUMN image.user_id IS '所属用户ID，关联 users.id';
+COMMENT ON COLUMN image.user_id IS '所属用户ID，关联 user.id';
 COMMENT ON COLUMN image.album_id IS '所属相册ID；若未归属任何相册，则为0';
 COMMENT ON COLUMN image.original_name IS '原始文件名（含扩展名），如 photo.jpg';
 COMMENT ON COLUMN image.title IS '图片标题，用户可自定义，可为空';
