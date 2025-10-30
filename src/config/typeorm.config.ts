@@ -14,7 +14,7 @@ const AppDataSource = new DataSource({
   password: configService.get<string>('DATABASE_PASSWORD', 'your_secure_password_here'),
   database: configService.get<string>('DATABASE_NAME', 'nest_eidos'),
   // 是否自动同步实体和数据库表结构（生产环境通常设为 false）
-  synchronize: false,
+  synchronize: true,
   // 告诉 TypeORM：
   // 在哪里查找数据库实体类 （实体类就是对应数据库表的 JavaScript 类）
   // **/*.entity.ts 是一个 通配符路径 ，表示：
