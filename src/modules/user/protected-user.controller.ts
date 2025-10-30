@@ -23,18 +23,12 @@ export class ProtectedUserController {
     description: '获取成功',
     schema: {
       example: {
-        code: 200,
-        message: '查询成功',
-        data: {
-          id: '1234567890123456789',
-          userName: 'testuser',
-          userType: 10,
-          userStatus: 1,
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/users/profile',
+        id: '1234567890123456789',
+        userName: 'testuser',
+        userType: 10,
+        userStatus: 1,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     },
   })
@@ -50,18 +44,12 @@ export class ProtectedUserController {
     description: '认证有效',
     schema: {
       example: {
-        code: 200,
-        message: '查询成功',
-        data: {
-          authenticated: true,
-          user: {
-            userId: '1234567890123456789',
-            userName: 'testuser',
-            userType: 10,
-          },
+        authenticated: true,
+        user: {
+          userId: '1234567890123456789',
+          userName: 'testuser',
+          userType: 10,
         },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/users/check-auth',
       },
     },
   })

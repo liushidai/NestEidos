@@ -42,17 +42,11 @@ export class ProtectedAlbumController {
     description: '创建成功',
     schema: {
       example: {
-        code: 201,
-        message: '操作成功',
-        data: {
-          id: '1234567890123456789',
-          userId: '1234567890123456788',
-          albumName: '我的相册',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/albums',
+        id: '1234567890123456789',
+        userId: '1234567890123456788',
+        albumName: '我的相册',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     },
   })
@@ -67,13 +61,7 @@ export class ProtectedAlbumController {
   async create(@Body() createAlbumDto: CreateAlbumDto, @Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
     const album = await this.albumService.create(createAlbumDto, userId);
-    return {
-      code: 201,
-      message: '创建成功',
-      data: album,
-      timestamp: new Date().toISOString(),
-      path: '/api/albums',
-    };
+    return album;
   }
 
   @Get()
@@ -84,25 +72,19 @@ export class ProtectedAlbumController {
     description: '查询成功',
     schema: {
       example: {
-        code: 200,
-        message: '查询成功',
-        data: {
-          albums: [
-            {
-              id: '1234567890123456789',
-              userId: '1234567890123456788',
-              albumName: '我的相册',
-              createdAt: '2024-01-01T00:00:00.000Z',
-              updatedAt: '2024-01-01T00:00:00.000Z',
-            },
-          ],
-          total: 1,
-          page: 1,
-          limit: 10,
-          totalPages: 1,
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/albums',
+        albums: [
+          {
+            id: '1234567890123456789',
+            userId: '1234567890123456788',
+            albumName: '我的相册',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
       },
     },
   })
@@ -113,14 +95,7 @@ export class ProtectedAlbumController {
   async findAll(@Query() queryDto: QueryAlbumDto, @Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
     const result = await this.albumService.findByUserId(userId, queryDto);
-
-    return {
-      code: 200,
-      message: '查询成功',
-      data: result,
-      timestamp: new Date().toISOString(),
-      path: '/api/albums',
-    };
+    return result;
   }
 
   @Get(':id')
@@ -131,17 +106,11 @@ export class ProtectedAlbumController {
     description: '查询成功',
     schema: {
       example: {
-        code: 200,
-        message: '查询成功',
-        data: {
-          id: '1234567890123456789',
-          userId: '1234567890123456788',
-          albumName: '我的相册',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/albums/1234567890123456789',
+        id: '1234567890123456789',
+        userId: '1234567890123456788',
+        albumName: '我的相册',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     },
   })
@@ -156,24 +125,7 @@ export class ProtectedAlbumController {
   async findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
     const album = await this.albumService.findByIdAndUserId(id, userId);
-
-    if (!album) {
-      return {
-        code: 404,
-        message: '相册不存在',
-        data: null,
-        timestamp: new Date().toISOString(),
-        path: `/api/albums/${id}`,
-      };
-    }
-
-    return {
-      code: 200,
-      message: '查询成功',
-      data: album,
-      timestamp: new Date().toISOString(),
-      path: `/api/albums/${id}`,
-    };
+    return album;
   }
 
   @Patch(':id')
@@ -185,17 +137,11 @@ export class ProtectedAlbumController {
     description: '更新成功',
     schema: {
       example: {
-        code: 200,
-        message: '更新成功',
-        data: {
-          id: '1234567890123456789',
-          userId: '1234567890123456788',
-          albumName: '更新后的相册名称',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/albums/1234567890123456789',
+        id: '1234567890123456789',
+        userId: '1234567890123456788',
+        albumName: '更新后的相册名称',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     },
   })
@@ -217,28 +163,7 @@ export class ProtectedAlbumController {
     @Request() req: AuthenticatedRequest,
   ) {
     const userId = req.user.userId;
-
-    try {
-      const album = await this.albumService.update(id, userId, updateAlbumDto);
-      return {
-        code: 200,
-        message: '更新成功',
-        data: album,
-        timestamp: new Date().toISOString(),
-        path: `/api/albums/${id}`,
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        return {
-          code: 404,
-          message: error.message,
-          data: null,
-          timestamp: new Date().toISOString(),
-          path: `/api/albums/${id}`,
-        };
-      }
-      throw error;
-    }
+    return this.albumService.update(id, userId, updateAlbumDto);
   }
 
   @Delete(':id')
@@ -249,13 +174,7 @@ export class ProtectedAlbumController {
     status: 200,
     description: '删除成功',
     schema: {
-      example: {
-        code: 200,
-        message: '删除成功',
-        data: null,
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/albums/1234567890123456789',
-      },
+      example: null,
     },
   })
   @ApiResponse({
@@ -268,27 +187,6 @@ export class ProtectedAlbumController {
   })
   async remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
-
-    try {
-      await this.albumService.delete(id, userId);
-      return {
-        code: 200,
-        message: '删除成功',
-        data: null,
-        timestamp: new Date().toISOString(),
-        path: `/api/albums/${id}`,
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        return {
-          code: 404,
-          message: error.message,
-          data: null,
-          timestamp: new Date().toISOString(),
-          path: `/api/albums/${id}`,
-        };
-      }
-      throw error;
-    }
+    await this.albumService.delete(id, userId);
   }
 }

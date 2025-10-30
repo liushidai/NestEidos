@@ -24,18 +24,12 @@ export class AuthController {
     description: '注册成功',
     schema: {
       example: {
-        code: 201,
-        message: '操作成功',
-        data: {
-          id: '1234567890123456789',
-          userName: 'testuser',
-          userType: 10,
-          userStatus: 1,
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/auth/register',
+        id: '1234567890123456789',
+        userName: 'testuser',
+        userType: 10,
+        userStatus: 1,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     },
   })
@@ -59,14 +53,8 @@ export class AuthController {
     description: '登录成功',
     schema: {
       example: {
-        code: 200,
-        message: '操作成功',
-        data: {
-          token: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
-          expires_in: 3600,
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/auth/login',
+        token: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        expires_in: 3600,
       },
     },
   })
@@ -86,13 +74,7 @@ export class AuthController {
     status: 200,
     description: '注销成功',
     schema: {
-      example: {
-        code: 200,
-        message: '操作成功',
-        data: null,
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/auth/logout',
-      },
+      example: null,
     },
   })
   @ApiResponse({
@@ -123,15 +105,9 @@ export class AuthController {
     description: '获取成功',
     schema: {
       example: {
-        code: 200,
-        message: '查询成功',
-        data: {
-          userId: '1234567890123456789',
-          userName: 'testuser',
-          userType: 10,
-        },
-        timestamp: '2024-01-01T00:00:00.000Z',
-        path: '/api/auth/profile',
+        userId: '1234567890123456789',
+        userName: 'testuser',
+        userType: 10,
       },
     },
   })
