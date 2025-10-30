@@ -26,7 +26,7 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
   constructor(private readonly configService: ConfigService) {
     const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
     const port = parseInt(this.configService.get<string>('MINIO_PORT', '9000'));
-    const useSSL = this.configService.get<boolean>('MINIO_USE_SSL', false);
+    const useSSL = this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
     const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY');
     const secretKey = this.configService.get<string>('MINIO_SECRET_KEY');
     this.bucket = this.configService.get<string>('MINIO_BUCKET', 'images');

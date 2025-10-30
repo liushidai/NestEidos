@@ -229,7 +229,7 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       expect(secureIdUtil.getKeyLength()).toBe(32);
     });
 
-    it('支持新配置项SECURE_ID_SECRET_KEY', () => {
+    it('支持SECURE_ID_SECRET_KEY配置项', () => {
       // 重置单例以创建新实例
       (SecureIdUtil as any).instance = null;
 
@@ -238,25 +238,6 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       } as unknown as jest.Mocked<ConfigService>;
 
       testConfigService.get.mockReturnValue(`hex:${validHexKey}`);
-      const util = SecureIdUtil.getInstance(testConfigService);
-      expect(util.isKeyValid()).toBe(true);
-    });
-
-    it('兼容旧配置项SECRET_KEY', () => {
-      // 重置单例以创建新实例
-      (SecureIdUtil as any).instance = null;
-
-      const testConfigService = {
-        get: jest.fn(),
-      } as unknown as jest.Mocked<ConfigService>;
-
-      testConfigService.get.mockImplementation((key: string) => {
-        if (key === 'SECRET_KEY') {
-          return `hex:${validHexKey}`;
-        }
-        return undefined;
-      });
-
       const util = SecureIdUtil.getInstance(testConfigService);
       expect(util.isKeyValid()).toBe(true);
     });

@@ -8,11 +8,11 @@ const configService = new ConfigService();
 const AppDataSource = new DataSource({
   // 配置数据库连接信息
   type: 'postgres',
-  host: configService.get<string>('DATABASE_HOST', 'localhost'),
-  port: Number.parseInt(configService.get<string>('DATABASE_PORT', '5432')),
-  username: configService.get<string>('DATABASE_USER', 'postgres'),
-  password: configService.get<string>('DATABASE_PASSWORD', 'your_secure_password_here'),
-  database: configService.get<string>('DATABASE_NAME', 'nest_eidos'),
+  host: configService.get<string>('DB_HOST', 'localhost'),
+  port: Number.parseInt(configService.get<string>('DB_PORT', '5432')),
+  username: configService.get<string>('DB_USERNAME', 'postgres'),
+  password: configService.get<string>('DB_PASSWORD', 'your_password'),
+  database: configService.get<string>('DB_DATABASE', 'nest_eidos'),
   // 是否自动同步实体和数据库表结构（生产环境通常设为 false）
   synchronize: true,
   // 告诉 TypeORM：
@@ -26,7 +26,7 @@ const AppDataSource = new DataSource({
   // src/database/migrations/ 表示「在 src/database/migrations/ 文件夹中搜索」
   // *-migration.ts 表示「所有文件名以 -migration.ts 结尾的文件」
   migrations: ['src/database/migrations/*-migration.ts'],
-  // 是否在应用启动时自动运行迁移文件 
+  // 是否在应用启动时自动运行迁移文件
   // 这在开发环境中很方便，但是在生产环境中应该避免自动运行迁移文件，因为这可能会导致数据丢失。
   migrationsRun: false,
   // 是否记录 SQL 查询日志

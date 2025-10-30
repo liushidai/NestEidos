@@ -18,14 +18,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DATABASE_HOST', 'localhost'),
-        port: configService.get('DATABASE_PORT', 5432),
-        username: configService.get('DATABASE_USER', 'postgres'),
-        password: configService.get('DATABASE_PASSWORD', 'your_secure_password_here'),
-        database: configService.get('DATABASE_NAME', 'nest_eidos'),
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 5432),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'your_password'),
+        database: configService.get('DB_DATABASE', 'nest_eidos'),
         // 自动加载通过各业务模块 TypeOrmModule.forFeature() 注册的实体（便于集中管理）
         autoLoadEntities: true,
         synchronize: false,
+        logging: true,
       }),
       // 注入 ConfigService 以获取数据库配置。
       inject: [ConfigService],

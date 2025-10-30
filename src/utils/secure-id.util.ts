@@ -31,14 +31,8 @@ export class SecureIdUtil {
   private readonly base62Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
   constructor(private readonly configService: ConfigService) {
-    // 从配置服务获取密钥，优先使用新配置项
-    let secretKey = this.configService.get<string>('SECURE_ID_SECRET_KEY');
-
-    // 兼容旧的 SECRET_KEY 配置
-    if (!secretKey) {
-      secretKey = this.configService.get<string>('SECRET_KEY');
-      this.logger.warn('Using deprecated SECRET_KEY config. Please migrate to SECURE_ID_SECRET_KEY');
-    }
+    // 从配置服务获取密钥
+    const secretKey = this.configService.get<string>('SECURE_ID_SECRET_KEY');
 
     if (!secretKey) {
       throw new Error('SECURE_ID_SECRET_KEY environment variable is required');
