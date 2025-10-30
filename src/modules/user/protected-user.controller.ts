@@ -16,21 +16,6 @@ interface AuthenticatedRequest extends ExpressRequest {
 export class ProtectedUserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  @ApiOperation({ summary: '获取所有用户信息（需要认证）' })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    type: [User],
-  })
-  @ApiResponse({
-    status: 401,
-    description: '认证令牌无效或已过期',
-  })
-  async findAll() {
-    return this.userService.findAll();
-  }
-
   @Get('profile')
   @ApiOperation({ summary: '获取当前用户的详细信息' })
   @ApiResponse({
