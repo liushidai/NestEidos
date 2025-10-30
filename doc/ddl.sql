@@ -7,7 +7,7 @@ CREATE DATABASE nest_eidos
     TEMPLATE = template0;
 
 -- 用户表
-CREATE TABLE user (
+CREATE TABLE "user" (
     id BIGINT PRIMARY KEY,
     user_name VARCHAR(64) NOT NULL UNIQUE,
     pass_word VARCHAR(255) NOT NULL,
@@ -18,16 +18,16 @@ CREATE TABLE user (
 );
 
 -- 表注释
-COMMENT ON TABLE user IS '用户表';
+COMMENT ON TABLE "user" IS '用户表';
 
 -- 字段注释
-COMMENT ON COLUMN user.id IS '用户ID，由程序使用雪花算法生成';
-COMMENT ON COLUMN user.user_name IS '用户名，唯一';
-COMMENT ON COLUMN user.pass_word IS '密码，存储加密后的哈希值';
-COMMENT ON COLUMN user.user_type IS '用户类型：1-管理员，10-普通用户';
-COMMENT ON COLUMN user.user_status IS '用户状态：1-正常，2-封锁，默认为1';
-COMMENT ON COLUMN user.created_at IS '创建时间，由程序插入时提供';
-COMMENT ON COLUMN user.updated_at IS '更新时间，由程序在每次更新时提供';
+COMMENT ON COLUMN "user".id IS '用户ID，由程序使用雪花算法生成';
+COMMENT ON COLUMN "user".user_name IS '用户名，唯一';
+COMMENT ON COLUMN "user".pass_word IS '密码，存储加密后的哈希值';
+COMMENT ON COLUMN "user".user_type IS '用户类型：1-管理员，10-普通用户';
+COMMENT ON COLUMN "user".user_status IS '用户状态：1-正常，2-封锁，默认为1';
+COMMENT ON COLUMN "user".created_at IS '创建时间，由程序插入时提供';
+COMMENT ON COLUMN "user".updated_at IS '更新时间，由程序在每次更新时提供';
 
 
 -- 相册表

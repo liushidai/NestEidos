@@ -14,22 +14,22 @@ export class User {
   @PrimaryColumn()
   id: string;
 
-  @Column({ unique: true, length: 64 })
+  @Column({ name: 'user_name', unique: true, length: 64 })
   userName: string;
 
-  @Column({ length: 255 })
+  @Column({ name: 'pass_word', length: 255 })
   passWord: string;
 
-  @Column({ type: 'smallint' })
+  @Column({ name: 'user_type', type: 'smallint' })
   userType: number;
 
-  @Column({ type: 'smallint', default: 1 })
+  @Column({ name: 'user_status', type: 'smallint', default: 1 })
   userStatus: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @Column({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 
   @BeforeInsert()
@@ -44,5 +44,20 @@ export class User {
     if (this.userStatus === undefined || this.userStatus === null) {
       this.userStatus = 1;
     }
+  }
+
+  @BeforeInsert()
+  setCreatedAt() {
+    if (!this.createdAt) {
+      this.createdAt = new Date();
+    }
+    if (!this.updatedAt) {
+      this.updatedAt = new Date();
+    }
+  }
+
+  @BeforeUpdate()
+  setUpdatedAt() {
+    this.updatedAt = new Date();
   }
 }
