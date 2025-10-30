@@ -49,7 +49,7 @@ describe('UserController', () => {
   describe('register', () => {
     const registerDto: RegisterUserDto = {
       userName: 'testuser',
-      passWord: 'password123',
+      passWord: 'Password123!',
       userType: 10,
     };
 

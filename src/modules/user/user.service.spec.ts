@@ -54,7 +54,7 @@ describe('UserService', () => {
   describe('register', () => {
     const registerDto: RegisterUserDto = {
       userName: 'testuser',
-      passWord: 'password123',
+      passWord: 'Password123!',
       userType: 10,
     };
 
@@ -149,6 +149,45 @@ describe('UserService', () => {
         userName: loginDto.userName,
       });
       expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+
+    it('should return consistent error message for non-existent user', async () => {
+      // Mock 查找用户不存在
+      repository.findOneBy.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      const error = await service.login(loginDto).catch(e => e);
+      expect(error.message).toBe('用户名或密码错误');
+    });
+
+    it('should return consistent error message for banned user', async () => {
+      const bannedUser = { ...mockUser, userStatus: 2 } as User;
+      // Mock 查找用户存在但被封禁
+      repository.findOneBy.mockResolvedValue(bannedUser);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      const error = await service.login(loginDto).catch(e => e);
+      expect(error.message).toBe('用户名或密码错误');
+    });
+
+    it('should return consistent error message for wrong password', async () => {
+      // Mock 查找用户存在
+      repository.findOneBy.mockResolvedValue(mockUser);
+      // Mock bcrypt 验证密码失败
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      const error = await service.login(loginDto).catch(e => e);
+      expect(error.message).toBe('用户名或密码错误');
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {

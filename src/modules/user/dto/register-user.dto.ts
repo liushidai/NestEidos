@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsIn, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsStrongPassword } from '../../../decorators/strong-password.decorator';
 
 export class RegisterUserDto {
   @ApiProperty({
@@ -17,14 +18,15 @@ export class RegisterUserDto {
 
   @ApiProperty({
     description: '密码',
-    example: 'password123',
+    example: 'Password123!',
     required: true,
     type: String,
-    minLength: 6,
+    minLength: 8,
+    pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$',
   })
   @IsString({ message: '密码必须是字符串' })
   @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(6, { message: '密码至少6个字符' })
+  @IsStrongPassword({ message: '密码必须至少8位，包含大写字母、小写字母、数字和特殊字符(@$!%*?&)' })
   passWord: string;
 
   @ApiProperty({

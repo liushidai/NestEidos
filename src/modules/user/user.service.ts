@@ -52,9 +52,9 @@ export class UserService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    // 检查用户状态
+    // 检查用户状态 - 为了安全，也返回相同的错误信息
     if (user.userStatus !== 1) {
-      throw new UnauthorizedException('用户账号已被封禁');
+      throw new UnauthorizedException('用户名或密码错误');
     }
 
     // 验证密码
