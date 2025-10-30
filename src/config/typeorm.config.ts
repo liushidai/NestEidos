@@ -10,9 +10,9 @@ const AppDataSource = new DataSource({
   type: 'postgres',
   host: configService.get<string>('DATABASE_HOST', 'localhost'),
   port: Number.parseInt(configService.get<string>('DATABASE_PORT', '5432')),
-  username: configService.get<string>('DATABASE_USER', 'nest-typeorm'),
-  password: configService.get<string>('DATABASE_PASSWORD', 'nest-typeorm'),
-  database: configService.get<string>('DATABASE_NAME', 'nest-typeorm'),
+  username: configService.get<string>('DATABASE_USER', 'postgres'),
+  password: configService.get<string>('DATABASE_PASSWORD', 'your_secure_password_here'),
+  database: configService.get<string>('DATABASE_NAME', 'nest_eidos'),
   // 是否自动同步实体和数据库表结构（生产环境通常设为 false）
   synchronize: false,
   // 告诉 TypeORM：

@@ -1,3 +1,11 @@
+CREATE DATABASE nest_eidos
+    WITH 
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'zh_CN.UTF-8'
+    LC_CTYPE = 'zh_CN.UTF-8'
+    TEMPLATE = template0;
+
 -- 用户表
 CREATE TABLE user (
     id BIGINT PRIMARY KEY,
