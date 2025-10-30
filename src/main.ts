@@ -8,6 +8,9 @@ import 'reflect-metadata';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
   // Enable validation pipe
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
