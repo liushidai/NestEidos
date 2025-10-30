@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Redis } from 'ioredis';
+import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
@@ -11,11 +12,14 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRedis()
     private redis: Redis,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -32,7 +36,8 @@ export class AuthService {
     }
 
     // 密码加密
-    const hashedPassword = await bcrypt.hash(registerUserDto.passWord, 10);
+    const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
+    const hashedPassword = await bcrypt.hash(registerUserDto.passWord, bcryptRounds);
 
     // 创建用户
     const user = this.userRepository.create({
@@ -69,52 +74,76 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    // 生成 token
-    const token = this.generateToken();
-    const expiresIn = 3600; // 1小时
+    try {
+      // 生成 token
+      const token = this.generateToken();
+      const expiresIn = this.configService.get<number>('auth.token.expiresIn') || 3600;
+      const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
 
-    // 存储到 Redis
-    await this.redis.setex(
-      `auth:token:${token}`,
-      expiresIn,
-      JSON.stringify({
-        userId: user.id,
-        userName: user.userName,
-        userType: user.userType,
-      }),
-    );
+      // 存储到 Redis
+      await this.redis.setex(
+        `${redisKeyPrefix}${token}`,
+        expiresIn,
+        JSON.stringify({
+          userId: user.id,
+          userName: user.userName,
+          userType: user.userType,
+        }),
+      );
 
-    return {
-      token,
-      expires_in: expiresIn,
-    };
+      this.logger.log(`用户 ${user.userName} 登录成功，Token: ${token.substring(0, 8)}...`);
+
+      return {
+        token,
+        expires_in: expiresIn,
+      };
+    } catch (error) {
+      this.logger.error(`登录过程中 Redis 操作失败: ${error.message}`, error.stack);
+      throw new UnauthorizedException('登录失败，请稍后重试');
+    }
   }
 
   /**
    * 验证 token
    */
   async validateToken(token: string): Promise<any> {
-    const userData = await this.redis.get(`auth:token:${token}`);
+    try {
+      const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
+      const userData = await this.redis.get(`${redisKeyPrefix}${token}`);
 
-    if (!userData) {
+      if (!userData) {
+        return null;
+      }
+
+      const parsedData = JSON.parse(userData);
+      this.logger.verbose(`Token 验证成功: ${token.substring(0, 8)}..., 用户: ${parsedData.userName}`);
+      return parsedData;
+    } catch (error) {
+      this.logger.error(`Token 验证过程中 Redis 操作失败: ${error.message}`, error.stack);
       return null;
     }
-
-    return JSON.parse(userData);
   }
 
   /**
    * 注销
    */
   async logout(token: string): Promise<void> {
-    await this.redis.del(`auth:token:${token}`);
+    try {
+      const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
+      await this.redis.del(`${redisKeyPrefix}${token}`);
+      this.logger.log(`用户注销成功，Token: ${token.substring(0, 8)}...`);
+    } catch (error) {
+      this.logger.error(`注销过程中 Redis 操作失败: ${error.message}`, error.stack);
+      // 即使 Redis 删除失败，也不抛出异常，因为 token 会自然过期
+    }
   }
 
   /**
    * 生成高强度随机 token
    */
   private generateToken(): string {
-    return randomBytes(32).toString('hex');
+    const bytesLength = this.configService.get<number>('auth.token.bytesLength') || 32;
+    return randomBytes(bytesLength).toString('hex');
   }
 
   /**
