@@ -7,13 +7,13 @@ import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
-import { Redis } from 'ioredis';
+import { CacheService } from '../redis/cache.service';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userRepository: jest.Mocked<Repository<User>>;
-  let redis: jest.Mocked<Redis>;
+  let cacheService: jest.Mocked<CacheService>;
   let configService: jest.Mocked<ConfigService>;
 
   const mockUser = {
@@ -32,10 +32,12 @@ describe('AuthService', () => {
     save: jest.fn(),
   };
 
-  const mockRedis = {
-    setex: jest.fn(),
+  const mockCacheService = {
     get: jest.fn(),
-    del: jest.fn(),
+    set: jest.fn(),
+    delete: jest.fn(),
+    has: jest.fn(),
+    clear: jest.fn(),
   };
 
   const mockConfigService = {
@@ -51,8 +53,8 @@ describe('AuthService', () => {
           useValue: mockRepository,
         },
         {
-          provide: 'default_IORedisModuleConnectionToken',
-          useValue: mockRedis,
+          provide: CacheService,
+          useValue: mockCacheService,
         },
         {
           provide: ConfigService,
@@ -63,7 +65,7 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     userRepository = module.get(getRepositoryToken(User)) as jest.Mocked<Repository<User>>;
-    redis = module.get('default_IORedisModuleConnectionToken') as jest.Mocked<Redis>;
+    cacheService = module.get(CacheService) as jest.Mocked<CacheService>;
     configService = module.get(ConfigService) as jest.Mocked<ConfigService>;
 
     // 默认配置值
@@ -124,7 +126,7 @@ describe('AuthService', () => {
     it('should successfully login and return token', async () => {
       mockRepository.findOneBy.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockRedis.setex.mockResolvedValue('OK');
+      mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
@@ -170,16 +172,16 @@ describe('AuthService', () => {
     };
 
     it('should return user data for valid token', async () => {
-      mockRedis.get.mockResolvedValue(JSON.stringify(userData));
+      mockCacheService.get.mockResolvedValue(userData);
 
       const result = await service.validateToken(token);
 
-      expect(mockRedis.get).toHaveBeenCalledWith(`auth:token:${token}`);
+      expect(mockCacheService.get).toHaveBeenCalledWith(`auth:token:${token}`);
       expect(result).toEqual(userData);
     });
 
     it('should return null for invalid token', async () => {
-      mockRedis.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
 
       const result = await service.validateToken(token);
 
@@ -187,7 +189,7 @@ describe('AuthService', () => {
     });
 
     it('should return null for expired token', async () => {
-      mockRedis.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
 
       const result = await service.validateToken(token);
 
@@ -199,11 +201,11 @@ describe('AuthService', () => {
     const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
     it('should successfully logout', async () => {
-      mockRedis.del.mockResolvedValue(1);
+      mockCacheService.delete.mockResolvedValue(undefined);
 
       await service.logout(token);
 
-      expect(mockRedis.del).toHaveBeenCalledWith(`auth:token:${token}`);
+      expect(mockCacheService.delete).toHaveBeenCalledWith(`auth:token:${token}`);
     });
   });
 
@@ -216,7 +218,7 @@ describe('AuthService', () => {
 
       mockRepository.findOneBy.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockRedis.setex.mockResolvedValue('OK');
+      mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
@@ -243,7 +245,7 @@ describe('AuthService', () => {
 
       mockRepository.findOneBy.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockRedis.setex.mockResolvedValue('OK');
+      mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
@@ -272,15 +274,15 @@ describe('AuthService', () => {
 
       mockRepository.findOneBy.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockRedis.setex.mockResolvedValue('OK');
+      mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
       expect(result.expires_in).toBe(7200);
-      expect(mockRedis.setex).toHaveBeenCalledWith(
+      expect(mockCacheService.set).toHaveBeenCalledWith(
         expect.stringContaining('auth:token:'),
-        7200,
-        expect.any(String),
+        expect.any(Object),
+        '7200s',
       );
     });
 
@@ -303,11 +305,11 @@ describe('AuthService', () => {
         userType: 10,
       };
 
-      mockRedis.get.mockResolvedValue(JSON.stringify(userData));
+      mockCacheService.get.mockResolvedValue(userData);
 
       await service.validateToken(token);
 
-      expect(mockRedis.get).toHaveBeenCalledWith(`custom:prefix:${token}`);
+      expect(mockCacheService.get).toHaveBeenCalledWith(`custom:prefix:${token}`);
     });
 
     it('should use custom bcrypt rounds from config', async () => {
@@ -347,7 +349,7 @@ describe('AuthService', () => {
 
       mockRepository.findOneBy.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockRedis.setex.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheService.set.mockRejectedValue(new Error('Redis connection failed'));
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
@@ -356,7 +358,7 @@ describe('AuthService', () => {
 
     it('should handle Redis connection error during token validation', async () => {
       const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockRedis.get.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheService.get.mockRejectedValue(new Error('Redis connection failed'));
 
       const result = await service.validateToken(token);
 
@@ -365,26 +367,17 @@ describe('AuthService', () => {
 
     it('should handle Redis connection error during logout gracefully', async () => {
       const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockRedis.del.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheService.delete.mockRejectedValue(new Error('Redis connection failed'));
 
       // 注销不应该抛出异常
       await expect(service.logout(token)).resolves.toBeUndefined();
-    });
-
-    it('should handle JSON parsing error during token validation', async () => {
-      const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockRedis.get.mockResolvedValue('invalid json string');
-
-      const result = await service.validateToken(token);
-
-      expect(result).toBeNull();
     });
   });
 
   describe('Edge cases', () => {
     it('should handle empty Redis response during token validation', async () => {
       const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockRedis.get.mockResolvedValue('');
+      mockCacheService.get.mockResolvedValue(undefined);
 
       const result = await service.validateToken(token);
 

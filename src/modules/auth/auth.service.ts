@@ -1,8 +1,7 @@
 import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InjectRedis } from '@nestjs-modules/ioredis';
-import { Redis } from 'ioredis';
+import { CacheService } from '../redis/cache.service';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
@@ -17,8 +16,7 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRedis()
-    private redis: Redis,
+    private cacheService: CacheService,
     private configService: ConfigService,
   ) {}
 
@@ -81,14 +79,14 @@ export class AuthService {
       const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
 
       // 存储到 Redis
-      await this.redis.setex(
+      await this.cacheService.set(
         `${redisKeyPrefix}${token}`,
-        expiresIn,
-        JSON.stringify({
+        {
           userId: user.id,
           userName: user.userName,
           userType: user.userType,
-        }),
+        },
+        `${expiresIn}s`, // cacheable 使用字符串格式的时间
       );
 
       this.logger.log(`用户 ${user.userName} 登录成功，Token: ${token.substring(0, 8)}...`);
@@ -109,15 +107,14 @@ export class AuthService {
   async validateToken(token: string): Promise<any> {
     try {
       const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
-      const userData = await this.redis.get(`${redisKeyPrefix}${token}`);
+      const userData = await this.cacheService.get<any>(`${redisKeyPrefix}${token}`);
 
       if (!userData) {
         return null;
       }
 
-      const parsedData = JSON.parse(userData);
-      this.logger.verbose(`Token 验证成功: ${token.substring(0, 8)}..., 用户: ${parsedData.userName}`);
-      return parsedData;
+      this.logger.verbose(`Token 验证成功: ${token.substring(0, 8)}..., 用户: ${userData.userName}`);
+      return userData;
     } catch (error) {
       this.logger.error(`Token 验证过程中 Redis 操作失败: ${error.message}`, error.stack);
       return null;
@@ -130,7 +127,7 @@ export class AuthService {
   async logout(token: string): Promise<void> {
     try {
       const redisKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
-      await this.redis.del(`${redisKeyPrefix}${token}`);
+      await this.cacheService.delete(`${redisKeyPrefix}${token}`);
       this.logger.log(`用户注销成功，Token: ${token.substring(0, 8)}...`);
     } catch (error) {
       this.logger.error(`注销过程中 Redis 操作失败: ${error.message}`, error.stack);

@@ -7,8 +7,6 @@ import { ModulesModule } from './modules/modules.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CacheModule } from '@nestjs/cache-manager';
-import * as redisStore from 'cache-manager-redis-store';
 // 声明模块的依赖与组成。
 @Module({
   imports: [
@@ -30,18 +28,6 @@ import * as redisStore from 'cache-manager-redis-store';
         synchronize: false,
       }),
       // 注入 ConfigService 以获取数据库配置。
-      inject: [ConfigService],
-    }),
-    // 异步配置 CacheModule，使用 ConfigService 从环境变量中获取 Redis 连接信息。
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get('REDIS_HOST', 'localhost'),
-        port: configService.get('REDIS_PORT', 6379),
-        password: configService.get('REDIS_PASSWORD'),
-        db: configService.get('REDIS_DB', 0),
-      }),
       inject: [ConfigService],
     }),
     // 导入 ModulesModule 以包含所有业务模块。
