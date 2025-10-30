@@ -49,18 +49,20 @@ export class SnowflakeUtil {
 
     this.lastTimestamp = timestamp;
 
-    // 移位并通过或运算拼到一起组成64位的ID
-    const datacenterIdShift = 5; // 数据中心ID左移位数
-    const workerIdShift = 5 + datacenterIdShift; // 机器ID左移位数
-    const timestampLeftShift = 12 + workerIdShift; // 时间戳左移位数
-    const sequenceMask = 4095; // 序列号掩码
+    // 使用 BigInt 进行位运算，避免 JavaScript 数字精度问题
+    const datacenterIdShift = 5n; // 数据中心ID左移位数
+    const workerIdShift = 5n + datacenterIdShift; // 机器ID左移位数
+    const timestampLeftShift = 12n + workerIdShift; // 时间戳左移位数
+    const sequenceMask = 4095n; // 序列号掩码
+    const epoch = 1288834974657n; // 雪花算法纪元时间戳
 
-    return (
-      ((timestamp - 1288834974657) << timestampLeftShift) |
-      (this.datacenterId << datacenterIdShift) |
-      (this.workerId << workerIdShift) |
-      (this.sequence & sequenceMask)
-    ).toString();
+    const id =
+      (BigInt(timestamp) - epoch) << timestampLeftShift |
+      BigInt(this.datacenterId) << datacenterIdShift |
+      BigInt(this.workerId) << workerIdShift |
+      (BigInt(this.sequence) & sequenceMask);
+
+    return id.toString();
   }
 
   // 阻塞到下一个毫秒，直到获得新的时间戳
