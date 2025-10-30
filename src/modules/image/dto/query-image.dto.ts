@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsArray, IsNumberString, Transform } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsNumberString, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryImageDto {

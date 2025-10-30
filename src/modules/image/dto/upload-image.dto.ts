@@ -1,7 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsFile } from 'class-validator';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { Transform } from 'class-transformer';
+import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class UploadImageDto {
   @ApiProperty({

@@ -8,7 +8,6 @@ import {
   Request,
   HttpCode,
   HttpStatus,
-  BadRequestException
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
@@ -17,6 +16,7 @@ import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UploadImageDto } from './dto/upload-image.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
+import { FileValidationPipe } from '../../pipes/file-validation.pipe';
 import { Request as ExpressRequest } from 'express';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -54,11 +54,11 @@ export class ImageUploadController {
         width: 1920,
         height: 1080,
         hash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
-        originalKey: 'images/2024/01/01/1234567890123456789.jpg',
-        webpKey: null,
-        avifKey: null,
-        hasWebp: false,
-        hasAvif: false,
+        originalKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-o.jpg',
+        webpKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-w.webp',
+        avifKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-a.avif',
+        hasWebp: true,
+        hasAvif: true,
         convertWebpParamId: null,
         convertAvifParamId: null,
         createdAt: '2024-01-01T00:00:00.000Z',
@@ -75,45 +75,14 @@ export class ImageUploadController {
     description: '认证令牌无效或已过期',
   })
   async uploadImage(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(FileValidationPipe.createImagePipe(100 * 1024 * 1024)) // 100MB
+    file: Express.Multer.File,
     @Body() createImageDto: CreateImageDto,
     @Request() req: AuthenticatedRequest,
   ): Promise<Image> {
-    // 验证文件是否存在
-    if (!file) {
-      throw new BadRequestException('请选择要上传的图片文件');
-    }
-
-    // 验证文件类型（暂时只允许图片格式）
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-    ];
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(`不支持的文件类型: ${file.mimetype}`);
-    }
-
-    // 验证文件大小（暂时限制为10MB）
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      throw new BadRequestException('文件大小不能超过10MB');
-    }
-
     const userId = req.user.userId;
 
-    // 暂时不实现实际的图片处理逻辑，只保存基本记录
-    // TODO: 后续实现实际的图片处理逻辑：
-    // 1. 文件类型验证
-    // 2. 图片尺寸获取
-    // 3. 文件哈希计算
-    // 4. 文件存储到对象存储
-    // 5. 生成缩略图和格式转换
-
+    // 完整的图片处理逻辑已在服务层实现
     const result = await this.imageService.create(createImageDto, userId, file);
 
     return result;
