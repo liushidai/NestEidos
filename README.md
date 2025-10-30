@@ -1,216 +1,208 @@
-<h4 align="right"><strong>English</strong> | <a href="https://github.com/Penggeor/nestjs-template/blob/main/README_CN.md">简体中文</a>
+# NestEidos - 轻量级图床服务
 
-![NestJS Template](./res/cover.jpg)
+## 项目简介
 
-# NestJS Template
+NestEidos 是一个基于 Node.js 和 Nest.js 框架构建的轻量级图床服务，提供用户注册、相册管理、图片上传存储等功能。系统采用现代化的技术栈，支持多种图片格式转换和存储优化。
 
-## Tech Stack
-- [Nest.js](https://nestjs.com/): A framework for building efficient, scalable Node.js applications.
-- [TypeORM](https://typeorm.io/): An ORM tool for database connection and operations.
-- [PostgreSQL](https://www.postgresql.org/): An open-source relational database management system.
-- [Redis](https://redis.io/): An open-source in-memory data structure store, used as a database, cache, and message broker.
-- [Swagger](https://swagger.io/): A tool for generating API documentation.
-> Swagger UI is accessible at `http://localhost:3000/api`. If you're using APIFox or Postman, you can import the API documentation from `http://localhost:3000/api-json`
+## 技术栈
 
-## Running the Project
+### 后端框架
+- **Nest.js** - 基于 TypeScript 的 Node.js 应用框架，提供模块化架构和依赖注入
+- **TypeScript** - 类型安全的 JavaScript 超集，提供更好的开发体验和代码质量
 
-### Prerequisites
+### 数据库与 ORM
+- **PostgreSQL** - 主数据库，存储用户、相册和图片元数据
+- **TypeORM** - 对象关系映射工具，提供数据库抽象层和迁移管理
+- **Redis** - 内存缓存数据库，用于会话存储和性能优化
 
-Before running the project, ensure you have the following services installed and running:
+### 对象存储
+- **MinIO** - S3 兼容的对象存储服务，用于存储原始图片和转换后的格式
+- **Sharp** - 高性能图片处理库，支持格式转换、缩放等操作
 
-- **PostgreSQL** (version 12 or higher)
-- **Redis** (version 6 or higher)
+### 认证与安全
+- **自定义Token认证** - 轻量级认证系统，替代传统JWT
+- **BCrypt** - 密码哈希加密
+- **雪花算法** - 分布式ID生成，确保ID唯一性
+- **Feistel网络PRP** - 安全ID加密，保护敏感数据
 
-### Database Setup
+### API文档
+- **Swagger** - 自动生成API文档，提供交互式文档界面
 
-1. Create a PostgreSQL database:
-```bash
-# Connect to PostgreSQL and create database
-createdb nest_eidos
+### 开发工具
+- **Jest** - 单元测试和集成测试框架
+- **ESLint & Prettier** - 代码质量和格式化工具
+- **SWC** - 快速TypeScript编译器
+
+## 项目架构
+
+### 目录结构
+```
+src/
+├── app.module.ts                 # 根模块
+├── main.ts                       # 应用入口
+├── config/                       # 配置文件
+│   ├── auth.config.ts           # 认证配置
+│   ├── redis.config.ts          # Redis配置
+│   └── typeorm.config.ts        # 数据库配置
+├── modules/                      # 业务模块
+│   ├── auth/                    # 认证模块
+│   │   ├── auth.module.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.controller.ts
+│   │   └── guards/              # 认证守卫
+│   ├── user/                    # 用户模块
+│   │   ├── user.module.ts
+│   │   ├── user.service.ts
+│   │   ├── entities/            # 用户实体
+│   │   └── dto/                 # 数据传输对象
+│   ├── album/                   # 相册模块
+│   │   ├── album.module.ts
+│   │   ├── album.service.ts
+│   │   ├── entities/            # 相册实体
+│   │   └── dto/                 # 数据传输对象
+│   ├── image/                   # 图片模块
+│   │   ├── image.module.ts
+│   │   ├── image.service.ts
+│   │   ├── entities/            # 图片实体
+│   │   ├── dto/                 # 数据传输对象
+│   │   └── controllers/         # 控制器
+│   └── redis/                   # Redis模块
+│       ├── redis.module.ts
+│       └── cache.service.ts
+├── utils/                        # 工具类
+│   ├── snowflake.util.ts        # 雪花算法ID生成
+│   └── secure-id.util.ts        # 安全ID处理
+├── services/                     # 业务服务
+│   ├── storage.service.ts       # 对象存储服务
+│   └── temp-file.service.ts     # 临时文件处理
+├── interceptors/                 # 拦截器
+│   └── response.interceptor.ts  # 响应拦截器
+├── filters/                      # 异常过滤器
+│   └── http-exception.filter.ts
+├── decorators/                   # 装饰器
+│   └── strong-password.decorator.ts
+├── pipes/                        # 管道
+│   └── file-validation.pipe.ts  # 文件验证管道
+├── constants/                    # 常量定义
+│   └── mime-type.constant.ts
+└── database/migrations/          # 数据库迁移文件
 ```
 
-2. Ensure Redis is running on your system:
-```bash
-# Check Redis status
-redis-cli ping
-```
+### 数据库设计
 
-### Environment Configuration
+系统采用三个核心数据表：
 
-1. Copy the environment template:
-```bash
-cp .env.example .env
-```
+#### 用户表 (user)
+- **字段**: id, user_name, pass_word, user_type, user_status, created_at, updated_at
+- **功能**: 存储用户基本信息和认证数据
+- **用户类型**: 1-管理员, 10-普通用户
+- **用户状态**: 1-正常, 2-封锁
 
-2. Edit `.env` file with your actual database and Redis configuration:
-```bash
-# Update database credentials
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=your_postgres_username
-DB_PASSWORD=your_postgres_password
-DB_DATABASE=nest_eidos
+#### 相册表 (album)
+- **字段**: id, user_id, album_name, created_at, updated_at
+- **功能**: 管理用户的相册分类
+- **关联**: 每个相册属于一个特定用户
 
-# Update Redis configuration if needed
-REDIS_HOST=localhost
-REDIS_PORT=6379
-```
+#### 图片表 (image)
+- **字段**: id, user_id, album_id, original_name, title, file_size, mime_type, width, height, hash, original_key, webp_key, avif_key, has_webp, has_avif, convert_webp_param_id, convert_avif_param_id, created_at, updated_at
+- **功能**: 存储图片元数据和多格式存储信息
+- **特性**: 支持SHA256去重、WebP/AVIF格式转换、关联相册管理
 
-### Install Dependencies
+### 核心功能模块
+
+#### 1. 认证模块 (Auth)
+- 用户注册和登录
+- 自定义Token认证机制
+- 密码强度验证
+- 认证守卫保护
+
+#### 2. 用户模块 (User)
+- 用户信息管理
+- 权限控制
+- 用户状态管理
+
+#### 3. 相册模块 (Album)
+- 相册创建和管理
+- 相册与用户关联
+- 图片分类组织
+
+#### 4. 图片模块 (Image)
+- 图片上传处理
+- 多格式存储 (Original, WebP, AVIF)
+- 图片元数据提取
+- 文件去重检测
+- 图片查询和管理
+
+#### 5. 存储服务 (Storage)
+- MinIO对象存储集成
+- 多格式图片处理
+- 临时文件管理
+
+### 技术特性
+
+#### 性能优化
+- Redis缓存支持
+- 图片格式转换 (WebP, AVIF)
+- 批量操作支持
+- 数据库索引优化
+
+#### 安全特性
+- 密码BCrypt加密
+- 安全ID加密机制
+- 文件类型验证
+- 访问权限控制
+
+#### 开发特性
+- TypeScript类型安全
+- 模块化架构设计
+- 自动化测试支持
+- Swagger API文档
+- 代码规范检查
+
+### 部署和运行
+
+#### 环境准备
 
 ```bash
 npm install
 ```
 
-### Start the Project
+#### 启动项目
 
 ```bash
 npm run start:dev
 ```
 
-### Access the Project
+#### 访问项目
 
-1. Via Terminal
+1. 通过命令终端访问
 
 ```bash
 curl --location --request GET 'http://localhost:3000'
 ```
 
-2. Via Browser
+2. 通过浏览器访问
 
 ```bash
 http://localhost:3000
 ```
 
-Both methods will return `Hello World!`
+#### API文档
+- Swagger UI: `http://localhost:3000/api`
+- JSON格式: `http://localhost:3000/api-json`
 
-## Authentication System
+#### 开发环境特性
+- 支持热重载开发
+- 数据库迁移管理
+- 环境配置支持
 
-This project includes a lightweight Token-based authentication system with Redis storage. The system provides secure user authentication without using JWT tokens.
+## 项目优势
 
-### Architecture Overview
+1. **轻量级设计**: 专注核心功能，避免过度复杂化
+2. **现代化技术栈**: 采用当前主流技术和最佳实践
+3. **高性能存储**: 支持多种图片格式和压缩优化
+4. **安全可靠**: 完善的认证和数据保护机制
+5. **易于扩展**: 模块化架构支持功能扩展
+6. **开发友好**: 完整的TypeScript支持和自动化工具
 
-```mermaid
-graph TB
-    Client[客户端应用] --> Gateway[API Gateway /api]
-
-    Gateway --> |1. 注册请求| AuthController[AuthController<br/>POST /api/auth/register]
-    Gateway --> |2. 登录请求| AuthController
-    Gateway --> |3. 受保护请求| ProtectedController[Protected Controllers<br/>GET /api/users/*]
-
-    AuthController --> AuthService[AuthService]
-    AuthController --> |4. 用户查询| UserRepository[(PostgreSQL)<br/>User Repository]
-
-    AuthService --> |5. 密码验证| Bcrypt[bcrypt哈希验证]
-    AuthService --> |6. Token生成| TokenGen[Token生成器<br/>randomBytes(32)]
-    AuthService --> |7. Redis存储| Redis[(Redis)<br/>Token Storage]
-
-    ProtectedController --> |8. Token验证| TokenGuard[TokenGuard]
-    TokenGuard --> AuthService
-
-    Redis --> |9. TTL自动过期| TokenCleanup[Token自动清理]
-
-    subgraph "认证流程"
-        AuthController --> AuthService --> Redis
-    end
-
-    subgraph "数据存储"
-        UserRepository
-        Redis
-    end
-```
-
-### Authentication Flow
-
-1. **用户注册** (`POST /api/auth/register`)
-   - 客户端提交用户名、密码、用户类型
-   - 服务端验证用户名唯一性
-   - 密码使用 bcrypt 哈希存储
-   - 返回用户信息（不含密码）
-
-2. **用户登录** (`POST /api/auth/login`)
-   - 客户端提交用户名、密码
-   - 服务端验证凭据
-   - 生成高强度随机 Token (64位hex字符串)
-   - Token 存储到 Redis (TTL: 3600秒)
-   - 返回 `{ token, expires_in }`
-
-3. **请求认证**
-   - 客户端在请求头中携带：`Authorization: Bearer <token>`
-   - TokenGuard 中间件验证 Token
-   - 从 Redis 查询 Token 有效性
-   - 用户信息挂载到 `request.user`
-
-4. **用户注销** (`POST /api/auth/logout`)
-   - 客户端提交 Token
-   - 从 Redis 删除对应 Token
-   - 立即失效
-
-### Security Features
-
-- 🔐 **密码安全**: bcrypt 哈希存储，可配置加密轮数
-- 🎫 **高强度Token**: crypto.randomBytes(32) 生成64位hex字符串
-- ⏰ **自动过期**: Redis TTL 自动清理过期Token
-- 🛡️ **防枚举攻击**: 统一错误信息，不泄露用户存在状态
-- 📊 **配置化**: 所有关键参数支持环境变量配置
-
-### Environment Configuration
-
-```bash
-# Token 配置
-AUTH_TOKEN_EXPIRES_IN=3600        # Token 过期时间（秒）
-AUTH_TOKEN_BYTES_LENGTH=32        # Token 字节长度
-AUTH_REDIS_KEY_PREFIX=auth:token: # Redis 键前缀
-
-# 安全配置
-AUTH_BCRYPT_ROUNDS=10             # bcrypt 加密轮数
-AUTH_MAX_LOGIN_ATTEMPTS=5         # 最大登录尝试次数
-AUTH_LOCKOUT_TIME=900             # 账号锁定时间（秒）
-```
-
-### API Endpoints
-
-#### Public Endpoints (No Authentication Required)
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login` - 用户登录
-- `POST /api/auth/logout` - 用户注销
-- `GET /api/auth/profile` - 获取当前用户信息
-
-#### Protected Endpoints (Authentication Required)
-- `GET /api/users` - 获取所有用户
-- `GET /api/users/profile` - 用户详细信息
-- `GET /api/users/check-auth` - 检查认证状态
-
-### Testing
-
-The authentication system includes comprehensive test coverage:
-
-- **AuthService Tests**: 25+ test cases covering all scenarios
-- **AuthController Tests**: 7+ test cases for API endpoints
-- **TokenGuard Tests**: 9+ test cases for authentication middleware
-- **Error Handling**: Redis connection failures, invalid data, edge cases
-
-```bash
-# Run authentication tests
-npm test -- --testPathPattern="auth.*spec.ts$"
-
-# Run all tests
-npm test
-```
-
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run start:dev
-
-# Access Swagger documentation
-http://localhost:3000/api
-```
-
-## Contact the Author
-
-If you encounter any issues, besides GitHub Issues, you can find my contact information at [wukaipeng.com](https://wukaipeng.com/). 
+该项目适合作为个人或小团队的图床解决方案，提供了完整的图片管理和存储功能，同时保持了良好的代码质量和可维护性。
