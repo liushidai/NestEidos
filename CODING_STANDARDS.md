@@ -254,7 +254,7 @@ describe('UserService', () => {
 ```typescript
 @Injectable()
 export class UserRepository {
-  private readonly CACHE_TTL = 3600; // 1小时缓存
+  private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE); // 24小时缓存
 
   constructor(
     @InjectRepository(User)
@@ -347,7 +347,7 @@ export class UserRepository {
     // 缓存未命中，从数据库获取
     user = await this.userRepository.findOneBy({ id });
     if (user) {
-      await this.cacheService.set(cacheKey, user, 3600); // 1小时
+      await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE)); // 24小时
     }
 
     return user;
@@ -377,14 +377,31 @@ export class UserRepository {
 
 #### 3.3 TTL 策略
 
+项目使用统一的TTL配置管理系统，支持不同业务场景的缓存时间需求：
+
 ```typescript
-// 常用缓存时间（秒）
-const CACHE_TTL = {
-  SHORT: 300,     // 5分钟 - 频繁查询数据
-  DEFAULT: 3600,  // 1小时 - 一般业务数据
-  LONG: 7200,     // 2小时 - 稳定数据
+// TTL配置接口
+interface TTLConfig {
+  value: number;
+  unit: TTLUnit; // SECONDS, MINUTES, HOURS, DAYS
+}
+
+// 标准缓存时间配置
+const TTL_CONFIGS = {
+  USER_CACHE: { value: 24, unit: 'hours' },      // 24小时 - 用户信息缓存
+  AUTH_TOKEN: { value: 30, unit: 'days' },       // 30天 - 认证Token缓存
+  SHORT_CACHE: { value: 5, unit: 'minutes' },    // 5分钟 - 频繁查询数据
+  MEDIUM_CACHE: { value: 30, unit: 'minutes' },  // 30分钟 - 一般业务数据
+  LONG_CACHE: { value: 2, unit: 'hours' },       // 2小时 - 稳定数据
+  DEFAULT_CACHE: { value: 4, unit: 'hours' },    // 4小时 - 默认缓存
 };
 ```
+
+**缓存时间选择原则**：
+- **用户信息**：24小时 - 用户数据相对稳定，适合长时间缓存
+- **认证Token**：30天 - 提供长期登录体验，支持token自动刷新
+- **实时查询**：不缓存 - 如用户名验证等需要强一致性的场景
+- **分页数据**：不缓存 - 动态变化，避免缓存污染
 
 ### 4. Repository 层实现示例
 
@@ -398,7 +415,7 @@ export class UserRepository {
   ) {}
 
   /**
-   * 根据ID查找用户（带缓存）
+   * 根据ID查找用户（带缓存，24小时）
    */
   async findById(id: string): Promise<User | null> {
     const cacheKey = `user:id:${id}`;
@@ -414,9 +431,9 @@ export class UserRepository {
     this.logger.debug(`从数据库获取用户: ${id}`);
     const user = await this.userRepository.findOneBy({ id });
 
-    // 缓存结果
+    // 缓存结果（24小时）
     if (user) {
-      await this.cacheService.set(cacheKey, user, 3600);
+      await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
     }
 
     return user;
@@ -548,7 +565,7 @@ async findById(id: string): Promise<User | null> {
 
     user = await this.userRepository.findOneBy({ id });
     if (user) {
-      await this.cacheService.set(cacheKey, user, 3600);
+      await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
     }
     return user;
   } catch (error) {
@@ -583,7 +600,7 @@ async getCurrentUserProfile(userId: string): Promise<User> {
 
 // Repository层（带缓存）
 async findById(id: string): Promise<User | null> {
-  // 缓存逻辑，1小时TTL
+  // 缓存逻辑，24小时TTL
 }
 ```
 
@@ -617,7 +634,7 @@ async updateUser(id: string, userData: Partial<User>): Promise<User> {
 
 ```typescript
 // 旧代码（装饰器方式）
-@Cacheable({ ttl: 3600 })
+@Cacheable({ ttl: TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE) }) // 24小时
 async findById(id: string): Promise<User | null> {
   return this.userRepository.findOneBy({ id });
 }
@@ -630,7 +647,7 @@ async findById(id: string): Promise<User | null> {
 
   user = await this.userRepository.findOneBy({ id });
   if (user) {
-    await this.cacheService.set(cacheKey, user, 3600);
+    await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
   }
   return user;
 }

@@ -16,7 +16,7 @@ export interface TTLConfig {
 }
 
 export interface CacheTTLConfigs {
-  /** 用户信息缓存 - 1小时 */
+  /** 用户信息缓存 - 24小时 */
   USER_CACHE: TTLConfig;
   /** 短期缓存 - 5分钟 */
   SHORT_CACHE: TTLConfig;
@@ -24,7 +24,7 @@ export interface CacheTTLConfigs {
   MEDIUM_CACHE: TTLConfig;
   /** 长期缓存 - 2小时 */
   LONG_CACHE: TTLConfig;
-  /** 认证Token缓存 - 1小时（可配置） */
+  /** 认证Token缓存 - 30天（可配置） */
   AUTH_TOKEN: TTLConfig;
   /** 默认缓存 - 4小时 */
   DEFAULT_CACHE: TTLConfig;
@@ -34,11 +34,11 @@ export interface CacheTTLConfigs {
  * TTL配置常量
  */
 export const TTL_CONFIGS: CacheTTLConfigs = {
-  USER_CACHE: { value: 1, unit: TTLUnit.HOURS },
+  USER_CACHE: { value: 24, unit: TTLUnit.HOURS },
   SHORT_CACHE: { value: 5, unit: TTLUnit.MINUTES },
   MEDIUM_CACHE: { value: 30, unit: TTLUnit.MINUTES },
   LONG_CACHE: { value: 2, unit: TTLUnit.HOURS },
-  AUTH_TOKEN: { value: 1, unit: TTLUnit.HOURS }, // 默认1小时，可通过配置覆盖
+  AUTH_TOKEN: { value: 30, unit: TTLUnit.DAYS }, // 默认30天，可通过配置覆盖
   DEFAULT_CACHE: { value: 4, unit: TTLUnit.HOURS },
 };
 

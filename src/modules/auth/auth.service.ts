@@ -6,7 +6,7 @@ import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { TTL_CONFIGS, TTLUtils } from '../../common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils, TTLUnit } from '../../common/ttl/tls.config';
 import { UserRepository } from '../user/repositories/user.repository';
 
 @Injectable()
@@ -89,7 +89,7 @@ export class AuthService {
 
       if (configuredExpiresIn) {
         // 如果配置中有具体的过期时间，创建动态TTL配置
-        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, 'hours');
+        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, TTLUnit.HOURS);
       }
 
       // 存储到 Redis（使用统一的TTL配置）
@@ -180,7 +180,7 @@ export class AuthService {
       let tokenTTL = this.ttlConfigs.AUTH_TOKEN;
 
       if (configuredExpiresIn) {
-        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, 'hours');
+        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, TTLUnit.HOURS);
       }
 
       // 重新设置token和过期时间
