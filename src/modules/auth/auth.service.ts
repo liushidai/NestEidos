@@ -1,6 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, UnauthorizedException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { CacheService } from '../redis/cache.service';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
@@ -8,8 +6,8 @@ import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { Inject } from '@nestjs/common';
 import { TTL_CONFIGS, TTLUtils } from '../../common/ttl/tls.config';
+import { UserRepository } from '../user/repositories/user.repository';
 
 @Injectable()
 export class AuthService {
@@ -17,8 +15,8 @@ export class AuthService {
   private readonly tokenKeyPrefix: string;
 
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @Inject(forwardRef(() => UserRepository))
+    private userRepository: UserRepository,
     private cacheService: CacheService,
     private configService: ConfigService,
     @Inject('TTL_CONFIGS') private readonly ttlConfigs: typeof TTL_CONFIGS,
@@ -32,9 +30,7 @@ export class AuthService {
    */
   async register(registerUserDto: RegisterUserDto): Promise<User> {
     // 检查用户名是否已存在
-    const existingUser = await this.userRepository.findOneBy({
-      userName: registerUserDto.userName,
-    });
+    const existingUser = await this.userRepository.findByUserName(registerUserDto.userName);
 
     if (existingUser) {
       throw new ConflictException('用户名已存在');
@@ -45,13 +41,12 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(registerUserDto.passWord, bcryptRounds);
 
     // 创建用户
-    const user = this.userRepository.create({
+    const userData = {
       ...registerUserDto,
       passWord: hashedPassword,
-    });
+    };
 
-    // 保存用户
-    return this.userRepository.save(user);
+    return this.userRepository.create(userData);
   }
 
   /**
@@ -66,9 +61,7 @@ export class AuthService {
    */
   async login(loginUserDto: LoginUserDto): Promise<{ token: string; expires_in: number }> {
     // 查找用户
-    const user = await this.userRepository.findOneBy({
-      userName: loginUserDto.userName,
-    });
+    const user = await this.userRepository.findByUserName(loginUserDto.userName);
 
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
@@ -168,7 +161,7 @@ export class AuthService {
    * 根据用户名查找用户
    */
   async findByUserName(userName: string): Promise<User | null> {
-    return this.userRepository.findOneBy({ userName });
+    return this.userRepository.findByUserName(userName);
   }
 
   /**

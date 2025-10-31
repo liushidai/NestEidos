@@ -46,6 +46,19 @@ export class UserRepository {
   }
 
   /**
+   * 根据用户名查找用户（无缓存，仅用于内部业务逻辑）
+   * 注意：此方法不使用缓存，仅用于需要实时查询的业务场景
+   */
+  async findByUserName(userName: string): Promise<User | null> {
+    try {
+      return await this.userRepository.findOneBy({ userName });
+    } catch (error) {
+      this.logger.error(`根据用户名查找用户失败: ${userName}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
    * 创建用户
    */
   async create(userData: Partial<User>): Promise<User> {
