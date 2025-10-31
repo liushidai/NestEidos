@@ -25,7 +25,7 @@ interface AuthenticatedRequest extends ExpressRequest {
 @ApiTags('图片管理（需认证）')
 @Controller('images')
 @UseGuards(TokenGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('token')
 export class ProtectedImageController {
   constructor(private readonly imageService: ImageService) {}
 

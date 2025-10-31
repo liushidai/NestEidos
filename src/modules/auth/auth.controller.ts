@@ -69,7 +69,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户注销' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('token')
   @ApiResponse({
     status: 200,
     description: '注销成功',
@@ -99,7 +99,7 @@ export class AuthController {
 
   @Get('profile')
   @ApiOperation({ summary: '获取当前用户信息' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('token')
   @ApiResponse({
     status: 200,
     description: '获取成功',

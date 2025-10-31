@@ -29,7 +29,7 @@ interface AuthenticatedRequest extends ExpressRequest {
 @ApiTags('相册管理（需认证）')
 @Controller('albums')
 @UseGuards(TokenGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('token')
 export class ProtectedAlbumController {
   constructor(private readonly albumService: AlbumService) {}
 

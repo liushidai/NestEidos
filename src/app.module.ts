@@ -46,9 +46,20 @@ export class AppModule {
   static setupSwagger(app: INestApplication): void {
     // 配置 Swagger 文档的标题、描述、版本等信息。
     const config = new DocumentBuilder()
-      .setTitle('Nest-TypeORM API')
-      .setDescription('The Nest-TypeORM API description')
+      .setTitle('图床服务 API')
+      .setDescription('基于 NestJS 的轻量级图床服务 API 文档')
       .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: '请输入登录后获取的 Token',
+          in: 'header',
+        },
+        'token', // 这是一个引用名称，用于 @ApiBearerAuth('token')
+      )
       .build();
     // 创建 Swagger 文档。
     const document = SwaggerModule.createDocument(app, config);

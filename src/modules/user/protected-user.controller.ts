@@ -12,7 +12,7 @@ interface AuthenticatedRequest extends ExpressRequest {
 @ApiTags('用户管理（需认证）')
 @Controller('users')
 @UseGuards(TokenGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('token')
 export class ProtectedUserController {
   constructor(private readonly userService: UserService) {}
 
