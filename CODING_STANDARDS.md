@@ -85,12 +85,14 @@ src/
 │       ├── dto/              # 数据传输对象
 │       ├── controllers/      # 控制器
 │       ├── services/         # 业务逻辑
+│       ├── repositories/     # 数据访问层（Repository）
 │       ├── guards/           # 守卫
 │       └── {module-name}.module.ts
 ├── config/                   # 配置文件
 ├── common/                   # 公共组件
 ├── utils/                    # 工具函数
-└── pipes/                    # 管道
+├── pipes/                    # 管道
+└── redis/                    # Redis 缓存服务
 ```
 
 ### 2. 导入顺序
@@ -234,6 +236,184 @@ describe('UserService', () => {
 - `test:` 测试相关
 - `chore:` 构建过程或辅助工具的变动
 
+## Repository 层设计规范
+
+### 1. Repository 层职责
+
+**原则：** Repository 层专门负责数据访问操作，与数据库进行交互，不包含业务逻辑。
+
+**文件位置：** `src/modules/{module-name}/repositories/{entity-name}.repository.ts`
+
+**示例：**
+```typescript
+@Injectable()
+export class UserRepository {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
+
+  async findById(id: string): Promise<User | null> {
+    try {
+      return await this.userRepository.findOneBy({ id });
+    } catch (error) {
+      this.logger.error(`根据ID查找用户失败: ${id}`, error.stack);
+      throw error;
+    }
+  }
+
+  async create(userData: Partial<User>): Promise<User> {
+    try {
+      const user = this.userRepository.create(userData);
+      return await this.userRepository.save(user);
+    } catch (error) {
+      this.logger.error(`创建用户失败: ${userData.userName}`, error.stack);
+      throw error;
+    }
+  }
+}
+```
+
+### 2. Repository 层命名规范
+
+- 类名：`{EntityName}Repository`（如 `UserRepository`）
+- 文件名：`{entity-name}.repository.ts`
+- 方法名：使用描述性的动词，如 `findById`、`findByUserName`、`create`、`update`、`delete`
+
+### 3. 错误处理
+
+- 所有数据库操作都应包含 try-catch 块
+- 使用结构化日志记录错误信息
+- 重新抛出异常供上层处理
+
+## 缓存设计规范
+
+### 1. 缓存策略
+
+**原则：** 使用 Redis 作为缓存层，优先从缓存获取数据，缓存未命中时访问数据库并更新缓存。
+
+**缓存键命名规范：**
+```
+{module}:{type}:{identifier}
+```
+
+**示例：**
+- `user:id:1234567890123456789` - 根据 ID 缓存用户
+- `user:username:testuser` - 根据用户名缓存用户
+- `user:exists:username:testuser` - 用户名存在性检查缓存
+
+### 2. 缓存实现
+
+**Service 层缓存集成示例：**
+```typescript
+@Injectable()
+export class UserService {
+  private readonly CACHE_TTL = 3600; // 1小时缓存
+
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly cacheService: CacheService,
+  ) {}
+
+  async findById(id: string): Promise<User | null> {
+    const cacheKey = `user:id:${id}`;
+
+    // 尝试从缓存获取
+    const cachedUser = await this.cacheService.get<User>(cacheKey);
+    if (cachedUser) {
+      return cachedUser;
+    }
+
+    // 缓存未命中，从数据库获取
+    const user = await this.userRepository.findById(id);
+    if (user) {
+      await this.cacheService.set(cacheKey, user, this.CACHE_TTL);
+    }
+
+    return user;
+  }
+}
+```
+
+### 3. 缓存失效管理
+
+**原则：** 在数据变更时主动清理相关缓存，确保数据一致性。
+
+```typescript
+private async clearUserCache(
+  userId?: string,
+  oldUserName?: string,
+  newUserName?: string,
+): Promise<void> {
+  const keysToDelete: string[] = [];
+
+  if (userId) {
+    keysToDelete.push(`user:id:${userId}`);
+  }
+
+  // 清理用户名相关的缓存
+  const userNames = new Set<string>();
+  if (oldUserName) userNames.add(oldUserName);
+  if (newUserName && newUserName !== oldUserName) userNames.add(newUserName);
+
+  for (const userName of userNames) {
+    keysToDelete.push(`user:username:${userName}`);
+    keysToDelete.push(`user:exists:username:${userName}`);
+  }
+
+  // 批量删除缓存
+  const deletePromises = keysToDelete.map(key =>
+    this.cacheService.delete(key).catch(error =>
+      this.logger.warn(`清理缓存失败: ${key}`, error.stack)
+    )
+  );
+
+  await Promise.all(deletePromises);
+}
+```
+
+### 4. 缓存 TTL 建议
+
+- **用户数据：** 1-4 小时（用户信息变化不频繁）
+- **存在性检查：** 5-15 分钟（可能经常变化）
+- **配置数据：** 30 分钟-2 小时
+- **临时数据：** 1-10 分钟
+
+### 5. 缓存注意事项
+
+- 缓存键要使用有意义的前缀，避免冲突
+- 敏感数据不应该缓存在明文中
+- 缓存失败不应该影响主要功能，要有降级策略
+- 定期监控缓存命中率和性能指标
+
+## 模块依赖规范
+
+### 1. 模块导出顺序
+
+```typescript
+@Module({
+  imports: [TypeOrmModule.forFeature([User]), AuthModule],
+  controllers: [ProtectedUserController],
+  providers: [UserService, UserRepository],
+  exports: [UserService, UserRepository],
+})
+export class UserModule {}
+```
+
+### 2. 注入顺序
+
+1. **Repository 层**：数据访问
+2. **Service 层**：业务逻辑
+3. **Controller 层**：API 接口
+
+**构造函数注入顺序：**
+```typescript
+constructor(
+  private readonly userRepository: UserRepository,    // 1. 数据访问层
+  private readonly cacheService: CacheService,        // 2. 基础服务
+) {}
+```
+
 ## 安全最佳实践
 
 ### 1. 认证
@@ -253,6 +433,12 @@ describe('UserService', () => {
 - 密码使用 bcrypt 加密
 - 不在日志中记录敏感信息
 - 使用环境变量存储密钥
+
+### 4. 缓存安全
+
+- 敏感数据不应缓存在明文中
+- 缓存数据设置合理的过期时间
+- 定期清理过期的缓存数据
 
 ---
 
