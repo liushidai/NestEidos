@@ -45,15 +45,25 @@ export class CacheUtils {
 
   /**
    * 生成模式匹配的缓存键
-   * @param className 类名
+   * @param prefix 前缀
+   * @param className 类名（可选）
    * @param methodName 方法名（可选）
    * @returns 缓存键模式
    */
   static generateKeyPattern(
-    className: string,
+    prefix?: string,
+    className?: string,
     methodName?: string,
   ): string {
-    const keyParts = [CACHE_PREFIXES.METHOD, className];
+    const keyParts = [];
+    if (prefix) {
+      keyParts.push(prefix);
+    } else {
+      keyParts.push(CACHE_PREFIXES.METHOD);
+    }
+    if (className) {
+      keyParts.push(className);
+    }
     if (methodName) {
       keyParts.push(methodName);
     }

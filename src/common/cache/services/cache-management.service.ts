@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CacheUtils } from '../cache.utils';
@@ -73,7 +73,7 @@ export class CacheManagementService {
    */
   async clearAllMethodCache(): Promise<void> {
     try {
-      const pattern = CacheUtils.generateKeyPattern();
+      const pattern = CacheUtils.generateKeyPattern('method');
       const keys = await this.getKeysByPattern(pattern);
 
       if (keys.length > 0) {
@@ -188,7 +188,7 @@ export class CacheManagementService {
     methodCacheKeys: number;
   }> {
     try {
-      const pattern = CacheUtils.generateKeyPattern();
+      const pattern = CacheUtils.generateKeyPattern('method');
       const methodKeys = await this.getKeysByPattern(pattern);
 
       return {

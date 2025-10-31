@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
+import { CacheModule as NestJSCacheModule } from '@nestjs/cache-manager';
 import { MethodCacheInterceptor } from './interceptors/method-cache.interceptor';
 import { CacheManagementService } from './services/cache-management.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -8,7 +8,7 @@ import { SampleCacheController } from './examples/sample-cache.controller';
 
 @Module({
   imports: [
-    CacheModule.register({
+    NestJSCacheModule.register({
       // 全局缓存配置
       isGlobal: true,
       ttl: 3600, // 默认1小时
@@ -16,12 +16,6 @@ import { SampleCacheController } from './examples/sample-cache.controller';
     }),
   ],
   providers: [
-    // 提供全局缓存拦截器
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: MethodCacheInterceptor,
-      global: true,
-    },
     // 缓存管理服务
     CacheManagementService,
     // 示例服务

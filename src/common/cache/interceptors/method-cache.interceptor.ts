@@ -7,7 +7,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Observable, of, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, switchMap } from 'rxjs/operators';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Reflector } from '@nestjs/core';
@@ -36,19 +36,17 @@ export class MethodCacheInterceptor implements NestInterceptor {
 
     this.logger.debug(`缓存拦截器检查键: ${cacheKey}`);
 
-    // 尝试从缓存获取数据
-    return this.getCachedValue(cacheKey).pipe(
-      tap(cachedValue => {
+    // 创建一个新的 Observable 来处理缓存逻辑
+    return new Observable(subscriber => {
+      this.getCachedValue(cacheKey).then(cachedValue => {
         if (cachedValue !== undefined) {
           this.logger.debug(`缓存命中: ${cacheKey}`);
+          subscriber.next(cachedValue);
+          subscriber.complete();
         } else {
           this.logger.debug(`缓存未命中: ${cacheKey}`);
-        }
-      }),
-      // 如果缓存未命中，执行原方法并缓存结果
-      cachedValue => {
-        if (cachedValue === undefined) {
-          return next.handle().pipe(
+          // 缓存未命中，执行原方法并缓存结果
+          next.handle().pipe(
             tap(result => {
               // 只缓存非 undefined 的结果
               if (result !== undefined) {
@@ -60,11 +58,30 @@ export class MethodCacheInterceptor implements NestInterceptor {
               this.logger.error(`方法执行失败，不缓存结果: ${cacheKey}`, error.stack);
               return throwError(() => error);
             }),
-          );
+          ).subscribe({
+            next: (result) => {
+              subscriber.next(result);
+              subscriber.complete();
+            },
+            error: (error) => {
+              subscriber.error(error);
+            }
+          });
         }
-        return of(cachedValue);
-      },
-    );
+      }).catch(error => {
+        this.logger.error(`缓存操作失败: ${cacheKey}`, error.stack);
+        // 缓存出错时直接执行原方法
+        next.handle().subscribe({
+          next: (result) => {
+            subscriber.next(result);
+            subscriber.complete();
+          },
+          error: (error) => {
+            subscriber.error(error);
+          }
+        });
+      });
+    });
   }
 
   /**
@@ -81,7 +98,18 @@ export class MethodCacheInterceptor implements NestInterceptor {
       metadata = this.reflector.get<any>('cacheable', controller);
     }
 
-    return metadata || null;
+    // 确保返回的metadata包含ttl属性且ttl是数字
+    if (metadata && typeof metadata === 'object' && 'ttl' in metadata) {
+      const ttl = (metadata as any).ttl;
+      if (typeof ttl === 'number') {
+        return {
+          ttl,
+          disabled: (metadata as any).disabled || false
+        };
+      }
+    }
+
+    return null;
   }
 
   /**

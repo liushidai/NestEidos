@@ -1,6 +1,6 @@
 import { SetMetadata, UseInterceptors } from '@nestjs/common';
 import { MethodCacheInterceptor } from '../interceptors/method-cache.interceptor';
-import { DEFAULT_CACHE_TTL } from '../cache.constants';
+import { DEFAULT_CACHE_TTL, DEFAULT_TTL_CONFIG } from '../cache.constants';
 
 /**
  * 缓存选项接口
@@ -68,3 +68,6 @@ export function getCacheableMetadata(
 ): CacheableOptions | null {
   return Reflect.getMetadata(CACHEABLE_METADATA_KEY, target, propertyKey);
 }
+
+// 导出DEFAULT_TTL_CONFIG供外部使用
+export { DEFAULT_TTL_CONFIG };
