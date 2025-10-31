@@ -37,6 +37,77 @@ export class ConfigValidationService {
   }
 
   /**
+   * 验证关键配置（可选模式，允许部分配置失败）
+   * @param skipOptional 跳过可选配置验证
+   * @returns 验证结果，包含成功和失败的配置项
+   */
+  public validateCritical(skipOptional: boolean = false): { success: string[], failed: string[], warnings: string[] } {
+    this.logger.log('开始验证关键环境配置...');
+
+    const result = {
+      success: [] as string[],
+      failed: [] as string[],
+      warnings: [] as string[],
+    };
+
+    // 数据库配置是必需的
+    try {
+      this.validateDatabaseConfig();
+      result.success.push('数据库配置');
+    } catch (error) {
+      result.failed.push(`数据库配置: ${error.message}`);
+    }
+
+    // Redis 配置是必需的
+    try {
+      this.validateRedisConfig();
+      result.success.push('Redis配置');
+    } catch (error) {
+      result.failed.push(`Redis配置: ${error.message}`);
+    }
+
+    // 其他配置根据 skipOptional 参数决定是否验证
+    if (!skipOptional) {
+      try {
+        this.validateMinioConfig();
+        result.success.push('MinIO配置');
+      } catch (error) {
+        result.warnings.push(`MinIO配置: ${error.message}`);
+      }
+
+      try {
+        this.validateSecureIdConfig();
+        result.success.push('安全ID配置');
+      } catch (error) {
+        result.warnings.push(`安全ID配置: ${error.message}`);
+      }
+
+      try {
+        this.validateAuthConfig();
+        result.success.push('认证配置');
+      } catch (error) {
+        result.warnings.push(`认证配置: ${error.message}`);
+      }
+    }
+
+    // 记录验证结果
+    if (result.success.length > 0) {
+      this.logger.log(`✅ 关键配置验证通过: ${result.success.join(', ')}`);
+    }
+
+    if (result.warnings.length > 0) {
+      result.warnings.forEach(warning => this.logger.warn(`⚠️ ${warning}`));
+    }
+
+    if (result.failed.length > 0) {
+      result.failed.forEach(failure => this.logger.error(`❌ ${failure}`));
+      throw new Error(`❌ 关键配置验证失败，无法启动应用`);
+    }
+
+    return result;
+  }
+
+  /**
    * 验证数据库配置
    */
   private validateDatabaseConfig(): void {
