@@ -98,30 +98,30 @@ export class CacheInvalidationInterceptor implements NestInterceptor {
   private mapArguments(mapping: string[], args: any[], result: any): any[] {
     const mappedArgs: any[] = [];
 
-    for (const mapping of mapping) {
-      if (mapping.startsWith('result.') && result) {
+    for (const mappingRule of mapping) {
+      if (mappingRule.startsWith('result.') && result) {
         // 从返回结果中提取
-        const resultPath = mapping.replace('result.', '');
+        const resultPath = mappingRule.replace('result.', '');
         const value = this.getNestedValue(result, resultPath);
         if (value !== undefined) {
           mappedArgs.push(value);
         }
-      } else if (mapping.startsWith('args.')) {
+      } else if (mappingRule.startsWith('args.')) {
         // 从方法参数中提取
-        const argIndex = parseInt(mapping.replace('args.', ''), 10);
+        const argIndex = parseInt(mappingRule.replace('args.', ''), 10);
         if (!isNaN(argIndex) && argIndex < args.length) {
           mappedArgs.push(args[argIndex]);
         }
-      } else if (mapping.startsWith('args.')) {
+      } else if (mappingRule.startsWith('args.')) {
         // 支持按参数名映射（通过对象参数）
-        const paramName = mapping.replace('args.', '');
+        const paramName = mappingRule.replace('args.', '');
         const value = this.findArgumentValue(args, paramName);
         if (value !== undefined) {
           mappedArgs.push(value);
         }
       } else {
         // 直接作为参数值
-        mappedArgs.push(mapping);
+        mappedArgs.push(mappingRule);
       }
     }
 
