@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
 import { SimpleCacheService } from '@/common/cache';
 import { User } from '../entities/user.entity';
-import { TTL_CONFIGS, TTLUtils } from '@/common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/common/ttl/tls.config';
 
 describe('UserRepository', () => {
   let userRepository: UserRepository;
@@ -65,7 +65,7 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('1234567890123456789');
 
-      expect(cacheService.get).toHaveBeenCalledWith('user:id:1234567890123456789');
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'));
       expect(result).toEqual(mockUser);
       expect(mockRepository.findOneBy).not.toHaveBeenCalled();
     });
@@ -76,9 +76,9 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('1234567890123456789');
 
-      expect(cacheService.get).toHaveBeenCalledWith('user:id:1234567890123456789');
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'));
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ id: '1234567890123456789' });
-      expect(cacheService.set).toHaveBeenCalledWith('user:id:1234567890123456789', mockUser, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+      expect(cacheService.set).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'), mockUser, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
       expect(result).toEqual(mockUser);
     });
 
@@ -88,6 +88,7 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('nonexistent');
 
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', 'nonexistent'));
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ id: 'nonexistent' });
       expect(cacheService.set).not.toHaveBeenCalled();
       expect(result).toBeNull();

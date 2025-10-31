@@ -31,6 +31,16 @@ export interface CacheTTLConfigs {
 }
 
 /**
+ * 缓存键前缀常量
+ */
+export const CACHE_KEYS = {
+  /** Repository层数据缓存前缀 */
+  REPOSITORY: 'repo',
+  /** 认证Token缓存前缀 */
+  AUTH: 'auth',
+};
+
+/**
  * TTL配置常量
  */
 export const TTL_CONFIGS: CacheTTLConfigs = {
@@ -120,5 +130,29 @@ export class TTLUtils {
     };
 
     return `${config.value} ${unitNames[config.unit]}`;
+  }
+}
+
+/**
+ * 缓存键工具类
+ */
+export class CacheKeyUtils {
+  /**
+   * 生成Repository层缓存键
+   * @param module 模块名（如 'user', 'album'）
+   * @param type 数据类型（如 'id', 'username'）
+   * @param identifier 标识符
+   */
+  static buildRepositoryKey(module: string, type: string, identifier: string): string {
+    return `${CACHE_KEYS.REPOSITORY}:${module}:${type}:${identifier}`;
+  }
+
+  /**
+   * 生成认证缓存键
+   * @param type 类型（如 'token'）
+   * @param identifier 标识符
+   */
+  static buildAuthKey(type: string, identifier: string): string {
+    return `${CACHE_KEYS.AUTH}:${type}:${identifier}`;
   }
 }

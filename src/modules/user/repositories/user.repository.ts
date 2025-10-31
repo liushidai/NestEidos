@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { SimpleCacheService } from '@/common/cache';
-import { TTL_CONFIGS, TTLUtils } from '@/common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/common/ttl/tls.config';
 
 @Injectable()
 export class UserRepository {
@@ -20,7 +20,7 @@ export class UserRepository {
    */
   async findById(id: string): Promise<User | null> {
     try {
-      const cacheKey = `user:id:${id}`;
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
 
       // 尝试从缓存获取
       const cachedUser = await this.cacheService.get<User>(cacheKey);

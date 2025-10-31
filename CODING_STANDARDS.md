@@ -263,7 +263,7 @@ export class UserRepository {
   ) {}
 
   async findById(id: string): Promise<User | null> {
-    const cacheKey = `user:id:${id}`;
+    const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
 
     // 尝试从缓存获取
     const cachedUser = await this.cacheService.get<User>(cacheKey);
@@ -336,7 +336,7 @@ export class UserRepository {
   ) {}
 
   async findById(id: string): Promise<User | null> {
-    const cacheKey = `user:id:${id}`;
+    const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
 
     // 尝试从缓存获取
     let user = await this.cacheService.get<User>(cacheKey);
@@ -359,21 +359,65 @@ export class UserRepository {
 
 **Repository 层统一管理所有缓存操作**：
 
-#### 3.1 缓存策略
+#### 3.1 缓存键前缀管理
+
+项目使用统一的缓存键前缀系统，确保不同业务模块的缓存键不会冲突：
+
+```typescript
+// 缓存键前缀常量
+export const CACHE_KEYS = {
+  REPOSITORY: 'repo',  // Repository层数据缓存前缀
+  AUTH: 'auth',        // 认证Token缓存前缀
+};
+
+// 缓存键工具类
+export class CacheKeyUtils {
+  static buildRepositoryKey(module: string, type: string, identifier: string): string {
+    return `${CACHE_KEYS.REPOSITORY}:${module}:${type}:${identifier}`;
+  }
+
+  static buildAuthKey(type: string, identifier: string): string {
+    return `${CACHE_KEYS.AUTH}:${type}:${identifier}`;
+  }
+}
+```
+
+**前缀管理的好处**：
+- **避免冲突**：不同业务模块的缓存键不会相互干扰
+- **便于管理**：可以通过前缀批量清理特定类型的缓存
+- **易于监控**：缓存监控系统可以按前缀分类统计
+- **扩展性**：新增业务模块时只需要使用标准的前缀格式
+
+#### 3.2 缓存策略
 
 - **查询方法**：`findById` 等通过ID查询的方法使用缓存
 - **写操作方法**：`update`、`delete` 等方法自动清理相关缓存
 - **分页接口**：不使用缓存（按需求）
 - **实时查询**：`findByUserName` 等方法不使用缓存，保证数据实时性
 
-#### 3.2 缓存键规范
+#### 3.3 缓存键规范
 
-**缓存键格式**：`{module}:{type}:{identifier}`
+**缓存键格式**：`{prefix}:{module}:{type}:{identifier}`
+
+**统一前缀**：
+- `repo:` - Repository层数据缓存前缀
+- `auth:` - 认证Token缓存前缀
 
 **示例**：
-- `user:id:123456789` - 用户ID查询
-- `user:username:testuser` - 用户名查询（如果有缓存）
-- `album:id:987654321` - 相册ID查询
+- `repo:user:id:123456789` - 用户ID查询
+- `repo:user:username:testuser` - 用户名查询（如果有缓存）
+- `repo:album:id:987654321` - 相册ID查询
+- `auth:token:abc123` - 认证Token
+
+**缓存键生成**：
+```typescript
+// 使用CacheKeyUtils工具类生成缓存键
+const userKey = CacheKeyUtils.buildRepositoryKey('user', 'id', userId);
+// 结果: 'repo:user:id:123456789'
+
+const tokenKey = CacheKeyUtils.buildAuthKey('token', tokenId);
+// 结果: 'auth:token:abc123'
+```
 
 #### 3.3 TTL 策略
 
@@ -418,7 +462,7 @@ export class UserRepository {
    * 根据ID查找用户（带缓存，24小时）
    */
   async findById(id: string): Promise<User | null> {
-    const cacheKey = `user:id:${id}`;
+    const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
 
     // 尝试从缓存获取
     const cachedUser = await this.cacheService.get<User>(cacheKey);
@@ -471,7 +515,7 @@ export class UserRepository {
    * 清理用户相关缓存
    */
   private async clearUserCache(userId: string): Promise<void> {
-    const cacheKey = `user:id:${userId}`;
+    const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', userId);
     await this.cacheService.delete(cacheKey);
     this.logger.debug(`清理用户缓存: ${userId}`);
   }
@@ -559,7 +603,7 @@ constructor(
 // Repository 层错误处理
 async findById(id: string): Promise<User | null> {
   try {
-    const cacheKey = `user:id:${id}`;
+    const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
     let user = await this.cacheService.get<User>(cacheKey);
     if (user) return user;
 
@@ -641,7 +685,7 @@ async findById(id: string): Promise<User | null> {
 
 // 新代码（Repository层缓存）
 async findById(id: string): Promise<User | null> {
-  const cacheKey = `user:id:${id}`;
+  const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
   let user = await this.cacheService.get<User>(cacheKey);
   if (user) return user;
 
