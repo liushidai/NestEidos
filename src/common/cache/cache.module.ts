@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CacheModule as NestJSCacheModule } from '@nestjs/cache-manager';
 import { MethodCacheInterceptor } from './interceptors/method-cache.interceptor';
+import { CacheInvalidationInterceptor } from './interceptors/cache-invalidation.interceptor';
 import { CacheManagementService } from './services/cache-management.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SampleCacheService } from './examples/sample-cache.service';
@@ -18,6 +19,11 @@ import { SampleCacheController } from './examples/sample-cache.controller';
   providers: [
     // 缓存管理服务
     CacheManagementService,
+    // 缓存失效拦截器（全局注册）
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CacheInvalidationInterceptor,
+    },
     // 示例服务
     SampleCacheService,
   ],

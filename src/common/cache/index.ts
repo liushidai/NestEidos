@@ -1,8 +1,14 @@
 // 装饰器
 export { Cacheable, CacheableOptions, getCacheableMetadata } from './decorators/cacheable.decorator';
+export {
+  CacheInvalidation,
+  CacheInvalidationConfig,
+  getCacheInvalidationConfig
+} from './decorators/cache-invalidation.decorator';
 
 // 拦截器
 export { MethodCacheInterceptor } from './interceptors/method-cache.interceptor';
+export { CacheInvalidationInterceptor } from './interceptors/cache-invalidation.interceptor';
 
 // 服务
 export { CacheManagementService } from './services/cache-management.service';

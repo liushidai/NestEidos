@@ -314,19 +314,15 @@ export class UserRepository {
 
 ## 缓存设计规范
 
-### 1. 缓存架构层次
+### 1. 缓存架构
 
-项目支持两种缓存实现方式：
+项目使用**方法级缓存（装饰器方式）**作为统一的缓存实现策略：
 
-#### 方式一：Repository 层缓存（传统方式）
-- **适用场景**：需要精细控制缓存策略的复杂数据访问
-- **实现位置**：`src/modules/{module-name}/repositories/`
-- **特点**：透明缓存，Service 层无感知
-
-#### 方式二：方法级缓存（装饰器方式）
-- **适用场景**：快速实现，简单的缓存需求
-- **实现位置**：使用 `@Cacheable` 装饰器
-- **特点**：声明式缓存，简化开发
+#### 方法级缓存（装饰器方式）
+- **适用场景**：所有缓存需求
+- **实现位置**：使用 `@Cacheable` 装饰器装饰 Service 层方法
+- **特点**：声明式缓存，简化开发，统一管理
+- **实现原则**：Repository 层专注于数据访问，Service 层负责业务逻辑和缓存管理
 
 ### 2. @Cacheable 装饰器方法级缓存
 
@@ -414,109 +410,171 @@ export class UserService {
 }
 ```
 
-### 3. Repository 层缓存实现（传统方式）
+### 3. Repository 层设计原则
 
-**适用场景**：需要复杂缓存策略或精细控制的情况。
+Repository 层专注于数据访问操作，不处理缓存逻辑：
 
 ```typescript
 @Injectable()
 export class UserRepository {
-  private readonly CACHE_TTL = 3600; // 1小时缓存
-
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly cacheService: CacheService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findById(id: string): Promise<User | null> {
-    const cacheKey = `user:id:${id}`;
+    // Repository 层专注于数据库操作，不处理缓存
+    return await this.userRepository.findOneBy({ id });
+  }
 
-    // Repository 层统一处理缓存逻辑
-    const cachedUser = await this.cacheService.get<User>(cacheKey);
-    if (cachedUser) {
-      return cachedUser;
-    }
-
-    const user = await this.userRepository.findOneBy({ id });
-    if (user) {
-      await this.cacheService.set(cacheKey, user, this.CACHE_TTL);
-    }
-
-    return user;
+  async create(userData: Partial<User>): Promise<User> {
+    const user = this.userRepository.create(userData);
+    return await this.userRepository.save(user);
   }
 }
 ```
 
-### 4. 缓存策略选择指南
+### 4. 自动化缓存清理机制
 
-#### 4.1 使用 @Cacheable 装饰器的场景
+#### 4.1 Service 层缓存装饰
 
-**推荐使用**：
-- 简单的查询方法
-- 标准的 CRUD 操作
-- 快速开发需求
-- 缓存策略相对统一的情况
-
-**示例**：
-```typescript
-@Cacheable({ ttl: DEFAULT_TTL_CONFIG.MEDIUM })
-async findUserByStatus(status: UserStatus): Promise<User[]> {
-  return this.userRepository.findBy({ status });
-}
-```
-
-#### 4.2 使用 Repository 层缓存的场景
-
-**推荐使用**：
-- 需要复杂的缓存键策略
-- 多个方法需要共享缓存
-- 需要特殊的缓存失效逻辑
-- 需要缓存统计和监控
-
-**示例**：
-```typescript
-async findByComplexCriteria(criteria: SearchCriteria): Promise<User[]> {
-  // 自定义缓存键逻辑
-  const cacheKey = this.generateComplexCacheKey(criteria);
-  // ... 复杂的缓存管理逻辑
-}
-```
-
-### 5. 缓存失效管理
-
-#### 5.1 自动失效
+**所有需要缓存的方法都应在 Service 层使用 @Cacheable 装饰器**：
 
 ```typescript
-// @Cacheable 装饰器支持通过 CacheManagementService 手动失效
 @Injectable()
 export class UserService {
   constructor(
-    private readonly cacheManagementService: CacheManagementService,
+    private readonly userRepository: UserRepository,
   ) {}
 
-  async updateUser(id: string, data: UpdateUserDto): Promise<User> {
-    const user = await this.userRepository.save({ id, ...data });
+  // 查询方法 - 使用缓存
+  @Cacheable({ ttl: DEFAULT_TTL_CONFIG.DEFAULT })
+  async findById(id: string): Promise<User | null> {
+    return this.userRepository.findById(id);
+  }
 
-    // 清除相关缓存
-    await this.cacheManagementService.clearMethodCache('UserService', 'getUserById');
-
-    return user;
+  // 写操作 - 自动清理相关缓存
+  @CacheInvalidation({
+    entries: [
+      { methodName: 'findById', paramMapping: ['result.id'] },
+      { methodName: 'findByUserName', paramMapping: ['result.userName'] }
+    ]
+  })
+  async create(userData: Partial<User>): Promise<User> {
+    return await this.userRepository.create(userData);
   }
 }
 ```
 
-#### 5.2 批量缓存管理
+#### 4.2 @CacheInvalidation 装饰器
+
+**自动化缓存清理装饰器**，通过声明式配置自动管理缓存失效：
+
+##### 4.2.1 基本语法
 
 ```typescript
-// 清除整个服务的缓存
-await this.cacheManagementService.clearClassCache('UserService');
+@CacheInvalidation({
+  entries: [
+    { methodName: 'findById', paramMapping: ['args.0'] },
+    { methodName: 'findByUserName', paramMapping: ['result.userName'] },
+    { methodName: 'findAll', clearAll: true }
+  ]
+})
+async updateUser(id: string, userData: Partial<User>): Promise<User> {
+  // 方法执行完成后会自动清理配置的相关缓存
+}
+```
 
-// 清除特定方法的所有缓存
-await this.cacheManagementService.clearMethodCache('UserService', 'getUserById');
+##### 4.2.2 参数映射规则
 
+- **`args.n`**：从方法参数中提取（n为参数索引）
+- **`args.paramName`**：从对象参数中按属性名提取
+- **`result.path`**：从返回结果中提取（支持嵌套路径）
+- **固定值**：直接使用指定的值
+
+**示例**：
+```typescript
+@CacheInvalidation({
+  entries: [
+    // 清理当前ID的findById缓存
+    { methodName: 'findById', paramMapping: ['args.0'] },
+
+    // 清理新邮箱和旧邮箱的findByEmail缓存
+    { methodName: 'findByEmail', paramMapping: ['result.email', 'args.1.email'] },
+
+    // 清理所有用户列表缓存
+    { methodName: 'findAll', clearAll: true }
+  ]
+})
+async updateUser(id: string, data: UpdateUserDto): Promise<User> {
+  // 自动缓存清理逻辑
+}
+```
+
+#### 4.3 缓存策略
+
+- **查询操作**：使用 @Cacheable 装饰器自动缓存
+- **写操作**：使用 @CacheInvalidation 装饰器自动清理相关缓存
+- **缓存管理**：通过装饰器配置自动管理，无需手动编写清理逻辑
+
+### 5. 缓存失效管理
+
+#### 5.1 自动失效（推荐）
+
+**使用 @CacheInvalidation 装饰器实现自动化缓存失效**：
+
+```typescript
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly userRepository: UserRepository,
+  ) {}
+
+  @CacheInvalidation({
+    entries: [
+      { methodName: 'findById', paramMapping: ['args.0'] },
+      { methodName: 'findByUserName', paramMapping: ['result.userName', 'args.1.userName'] }
+    ]
+  })
+  async updateUser(id: string, data: UpdateUserDto): Promise<User> {
+    // 方法执行完成后自动清理相关缓存，无需手动编写清理逻辑
+    const { updatedUser } = await this.userRepository.update(id, data);
+    return updatedUser;
+  }
+}
+```
+
+#### 5.2 手动失效（特殊情况）
+
+在需要复杂缓存清理逻辑的特殊场景下，仍可使用手动清理：
+
+```typescript
+// 注入 CacheManagementService
+constructor(
+  private readonly cacheManagementService: CacheManagementService,
+) {}
+
+// 手动清理特定缓存
+await this.cacheManagementService.clearMethodCache('UserService', 'findById');
+
+// 清理特定参数的缓存
+await this.cacheManagementService.clearMethodCacheWithArgs(
+  'UserService',
+  'findByUserName',
+  ['username']
+);
+```
+
+#### 5.3 缓存统计和监控
+
+```typescript
 // 获取缓存统计
 const stats = await this.cacheManagementService.getCacheStats();
+console.log(`当前缓存项数: ${stats.totalKeys}`);
+
+// 清除整个服务的缓存（谨慎使用）
+await this.cacheManagementService.clearClassCache('UserService');
 ```
 
 ### 6. 缓存 TTL 建议
@@ -553,18 +611,57 @@ async getCurrentStockPrice(symbol: string): Promise<number> {}
 
 #### 7.1 缓存设计原则
 
+- **声明式配置**：使用装饰器进行声明式缓存配置，避免硬编码
+- **自动化管理**：优先使用 @CacheInvalidation 装饰器自动管理缓存失效
 - **单一职责**：每个方法专注于单一业务功能，缓存作为横切关注点
 - **幂等性**：缓存不应影响方法的幂等性
 - **一致性**：确保缓存与数据源的一致性
 - **降级策略**：缓存失败时不影响业务功能
 
-#### 7.2 性能考虑
+#### 7.2 @CacheInvalidation 使用指南
+
+**推荐配置模式**：
+
+1. **创建操作**：清理返回结果相关的缓存
+```typescript
+@CacheInvalidation({
+  entries: [
+    { methodName: 'findById', paramMapping: ['result.id'] },
+    { methodName: 'findByUserName', paramMapping: ['result.userName'] }
+  ]
+})
+```
+
+2. **更新操作**：清理参数和返回结果相关的所有缓存
+```typescript
+@CacheInvalidation({
+  entries: [
+    { methodName: 'findById', paramMapping: ['args.0'] }, // 根据ID清理
+    { methodName: 'findByUserName', paramMapping: ['result.userName', 'args.1.userName'] }, // 新旧用户名
+    { methodName: 'findAll', clearAll: true } // 清理列表缓存
+  ]
+})
+```
+
+3. **删除操作**：清理被删除对象相关的所有缓存
+```typescript
+@CacheInvalidation({
+  entries: [
+    { methodName: 'findById', paramMapping: ['args.0'] },
+    { methodName: 'findByEmail', paramMapping: ['result.email'] },
+    { methodName: 'findAll', clearAll: true }
+  ]
+})
+```
+
+#### 7.3 性能考虑
 
 - **缓存粒度**：避免缓存过大的对象，考虑分页缓存
 - **内存管理**：设置合理的 TTL，避免内存泄漏
-- **并发控制**：使用缓存锁防止缓存击穿
+- **并发控制**：自动缓存清理机制避免了手动清理的并发问题
+- **批量清理**：使用 `clearAll: true` 批量清理列表类缓存
 
-#### 7.3 监控和调试
+#### 7.4 监控和调试
 
 ```typescript
 // 启用调试日志
@@ -580,6 +677,9 @@ export class UserService {
     // 业务逻辑
   }
 }
+
+// 缓存清理日志由 CacheInvalidationInterceptor 自动记录
+// 可以通过日志观察缓存清理行为
 ```
 
 ### 8. 常见陷阱和注意事项
@@ -589,21 +689,65 @@ export class UserService {
 - **缓存雪崩**：大量缓存同时过期，给数据库造成压力
 - **缓存穿透**：查询不存在的数据，绕过缓存直接访问数据库
 - **缓存击穿**：热点数据过期瞬间，大量请求直接访问数据库
+- **手动清理遗漏**：手动维护缓存清理逻辑容易遗漏某些缓存项
+- **参数映射错误**：手动参数匹配容易出现错误
 
 #### 8.2 解决方案
 
 ```typescript
-// 使用随机 TTL 避免缓存雪崩
+// 1. 使用随机 TTL 避免缓存雪崩
 @Cacheable({ ttl: DEFAULT_TTL_CONFIG.MEDIUM + Math.random() * 300 })
 async getPopularProducts(): Promise<Product[]> {}
 
-// 缓存空值避免缓存穿透
+// 2. 缓存空值避免缓存穿透
 @Cacheable({ ttl: DEFAULT_TTL_CONFIG.SHORT })
 async getUserByName(name: string): Promise<User | null> {
   const user = await this.userRepository.findOneBy({ name });
   // 即使返回 null 也会被缓存
   return user;
 }
+
+// 3. 使用 @CacheInvalidation 避免手动清理遗漏
+@CacheInvalidation({
+  entries: [
+    // 一次性配置所有需要清理的缓存，避免遗漏
+    { methodName: 'findById', paramMapping: ['args.0'] },
+    { methodName: 'findByEmail', paramMapping: ['result.email'] },
+    { methodName: 'findAll', clearAll: true }
+  ]
+})
+async updateUser(id: string, data: UpdateUserDto): Promise<User> {
+  // 自动缓存清理，无需手动编写清理逻辑
+}
+```
+
+#### 8.3 迁移指南
+
+**从手动清理迁移到自动清理**：
+
+1. **移除手动清理代码**：
+```typescript
+// 删除这样的代码
+// await this.clearUserRelatedCache(userId, userName);
+```
+
+2. **添加 @CacheInvalidation 装饰器**：
+```typescript
+@CacheInvalidation({
+  entries: [
+    { methodName: 'findById', paramMapping: ['args.0'] },
+    { methodName: 'findByUserName', paramMapping: ['args.1.userName'] }
+  ]
+})
+```
+
+3. **移除不必要的依赖注入**：
+```typescript
+// 如果不再需要手动清理，可以移除
+constructor(
+  // private readonly cacheManagementService: CacheManagementService,
+  private readonly userRepository: UserRepository,
+) {}
 ```
 
 ### 9. 缓存测试

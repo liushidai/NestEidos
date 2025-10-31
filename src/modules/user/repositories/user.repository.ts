@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from '../entities/user.entity';
 
 @Injectable()
@@ -10,6 +10,7 @@ export class UserRepository {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -53,22 +54,43 @@ export class UserRepository {
   }
 
   /**
-   * 更新用户
+   * 更新用户（使用事务确保一致性，返回更新前和更新后的用户信息）
    */
-  async update(id: string, userData: Partial<User>): Promise<User> {
-    try {
-      await this.userRepository.update(id, userData);
+  async update(id: string, userData: Partial<User>): Promise<{ oldUser: User | null; updatedUser: User }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-      const updatedUser = await this.userRepository.findOneBy({ id });
+    try {
+      // 在事务中先获取更新前的用户信息（使用悲观锁防止并发修改）
+      const oldUser = await queryRunner.manager.findOne(User, {
+        where: { id },
+        // 使用悲观锁，防止其他事务在此期间修改
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      // 执行更新操作
+      await queryRunner.manager.update(User, id, userData);
+
+      // 在同一事务中获取更新后的用户信息
+      const updatedUser = await queryRunner.manager.findOneBy(User, { id });
       if (!updatedUser) {
         throw new Error(`更新后找不到用户: ${id}`);
       }
 
+      // 提交事务
+      await queryRunner.commitTransaction();
+
       this.logger.log(`更新用户成功: ${id}`);
-      return updatedUser;
+      return { oldUser, updatedUser };
     } catch (error) {
+      // 回滚事务
+      await queryRunner.rollbackTransaction();
       this.logger.error(`更新用户失败: ${id}`, error.stack);
       throw error;
+    } finally {
+      // 释放连接
+      await queryRunner.release();
     }
   }
 
