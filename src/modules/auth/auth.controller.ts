@@ -84,16 +84,14 @@ export class AuthController {
   @UseGuards(TokenGuard)
   async logout(
     @Request() req: AuthenticatedRequest,
-    @Headers('authorization') authHeader?: string,
   ): Promise<void> {
-    let token: string;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else {
+    // 从请求头中提取 token（TokenGuard 已经验证了 token 的有效性）
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('未提供有效的认证令牌');
     }
 
+    const token = authHeader.substring(7);
     await this.authService.logout(token);
   }
 

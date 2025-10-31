@@ -113,11 +113,12 @@ describe('AuthController', () => {
     it('should logout user successfully', async () => {
       const mockRequest = {
         user: { userId: '1234567890123456789', userName: 'testuser' },
+        headers: { authorization: `Bearer ${token}` },
       } as any;
 
       mockAuthService.logout.mockResolvedValue(undefined);
 
-      await controller.logout(mockRequest, `Bearer ${token}`);
+      await controller.logout(mockRequest);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith(token);
     });
