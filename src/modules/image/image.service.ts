@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, Logger } f
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In, FindOptionsWhere } from 'typeorm';
 import { Image } from './entities/image.entity';
+import { File } from './entities/file.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { QueryImageDto } from './dto/query-image.dto';
@@ -22,6 +23,8 @@ export class ImageService {
   constructor(
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
+    @InjectRepository(File)
+    private readonly fileRepository: Repository<File>,
     private readonly storageService: StorageService,
     private readonly tempFileService: TempFileService,
     private readonly configService: ConfigService,
@@ -47,55 +50,66 @@ export class ImageService {
       // 2. 计算文件哈希值
       const hash = await this.calculateFileHash(tempFilePath);
 
-      // 3. 检查是否已存在相同哈希的图片（去重）
-      const existingImage = await this.findByHash(hash);
-      if (existingImage) {
-        this.logger.log(`发现重复图片，哈希: ${hash}`);
+      // 3. 检查是否已存在相同哈希的文件（去重）
+      let existingFile = await this.findFileByHash(hash);
+
+      if (!existingFile) {
+        // 4. 获取图片元数据
+        const metadata = await this.getImageMetadata(tempFilePath);
+
+        // 5. 生成存储路径（基于文件ID，而不是图片ID）
+        const fileId = snowflake.nextId();
+        const pathInfo = this.generateStoragePaths(fileId, metadata.format);
+
+        // 6. 格式转换
+        const conversionResult = await this.convertImageFormats(tempFilePath, metadata.format);
+
+        // 7. 上传到对象存储
+        const uploadKeys = await this.uploadImagesToStorage(
+          tempFilePath,
+          pathInfo,
+          fileData.mimetype,
+          conversionResult
+        );
+
+        // 8. 创建文件记录
+        existingFile = this.fileRepository.create({
+          id: fileId.toString(),
+          hash,
+          fileSize: fileData.size,
+          mimeType: fileData.mimetype,
+          width: metadata.width,
+          height: metadata.height,
+          originalKey: uploadKeys.original,
+          webpKey: uploadKeys.webp,
+          avifKey: uploadKeys.avif,
+          hasWebp: !!uploadKeys.webp,
+          hasAvif: !!uploadKeys.avif,
+          createdAt: now,
+        });
+
+        existingFile = await this.fileRepository.save(existingFile);
+        this.logger.log(`新文件上传成功: ${fileId}, 哈希: ${hash}`);
+      } else {
+        this.logger.log(`发现重复文件，复用已有文件记录: ${existingFile.id}, 哈希: ${hash}`);
         // 清理临时文件
         await this.tempFileService.deleteTempFile(tempFilePath);
-        return existingImage;
       }
 
-      // 4. 获取图片元数据
-      const metadata = await this.getImageMetadata(tempFilePath);
-
-      // 5. 生成存储路径
-      const pathInfo = this.generateStoragePaths(imageId, metadata.format);
-
-      // 6. 格式转换
-      const conversionResult = await this.convertImageFormats(tempFilePath, metadata.format);
-
-      // 7. 上传到对象存储
-      const uploadKeys = await this.uploadImagesToStorage(
-        tempFilePath,
-        pathInfo,
-        fileData.mimetype,
-        conversionResult
-      );
-
-      // 8. 保存到数据库
+      // 9. 创建图片记录
       const image = this.imageRepository.create({
         id: imageId,
         userId,
         albumId: createImageDto.albumId || '0',
         title: createImageDto.title,
         originalName: fileData.originalname,
-        fileSize: fileData.size,
-        mimeType: fileData.mimetype,
-        width: metadata.width,
-        height: metadata.height,
-        hash,
-        originalKey: uploadKeys.original,
-        webpKey: uploadKeys.webp,
-        avifKey: uploadKeys.avif,
-        hasWebp: !!uploadKeys.webp,
-        hasAvif: !!uploadKeys.avif,
+        fileId: existingFile.id,
         createdAt: now,
         updatedAt: now,
       });
 
       const savedImage = await this.imageRepository.save(image);
-      this.logger.log(`图片上传成功: ${imageId}, 原始文件: ${fileData.originalname}`);
+      this.logger.log(`图片记录创建成功: ${imageId}, 原始文件: ${fileData.originalname}`);
 
       return savedImage;
 
@@ -115,14 +129,20 @@ export class ImageService {
    * 根据ID查找图片
    */
   async findById(id: string): Promise<Image | null> {
-    return this.imageRepository.findOneBy({ id });
+    return this.imageRepository.findOne({
+      where: { id },
+      relations: ['file'],
+    });
   }
 
   /**
    * 根据ID和用户ID查找图片
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
-    return this.imageRepository.findOneBy({ id, userId });
+    return this.imageRepository.findOne({
+      where: { id, userId },
+      relations: ['file'],
+    });
   }
 
   /**
@@ -145,19 +165,30 @@ export class ImageService {
       where.albumId = albumId;
     }
 
-    // MIME类型筛选
+    // MIME类型筛选（现在通过file关联查询）
+    const queryBuilder = this.imageRepository
+      .createQueryBuilder('image')
+      .leftJoinAndSelect('image.file', 'file')
+      .where('image.userId = :userId', { userId })
+      .skip(skip)
+      .take(limit)
+      .orderBy('image.createdAt', 'DESC');
+
+    // 添加搜索条件
+    if (search) {
+      queryBuilder.andWhere('image.title LIKE :search', { search: `%${search}%` });
+    }
+
+    if (albumId) {
+      queryBuilder.andWhere('image.albumId = :albumId', { albumId });
+    }
+
     if (mimeType && mimeType.length > 0) {
-      where.mimeType = In(mimeType);
+      queryBuilder.andWhere('file.mimeType IN (:...mimeType)', { mimeType });
     }
 
     // 查询总数和数据
-    const [images, total] = await this.imageRepository.findAndCount({
-      where,
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-
+    const [images, total] = await queryBuilder.getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
     return {
@@ -197,7 +228,39 @@ export class ImageService {
       throw new NotFoundException('图片不存在或无权限操作');
     }
 
+    const fileId = image.fileId;
+
+    // 删除图片记录
     await this.imageRepository.remove(image);
+
+    // 检查是否还有其他图片引用这个文件
+    const remainingImagesCount = await this.imageRepository.count({
+      where: { fileId },
+    });
+
+    if (remainingImagesCount === 0) {
+      // 没有其他图片引用，删除文件记录和物理文件
+      const file = await this.fileRepository.findOneBy({ id: fileId });
+      if (file) {
+        // 删除对象存储中的文件
+        const keysToDelete = [file.originalKey];
+        if (file.webpKey) keysToDelete.push(file.webpKey);
+        if (file.avifKey) keysToDelete.push(file.avifKey);
+
+        try {
+          await this.storageService.deleteMany(keysToDelete);
+          this.logger.log(`删除物理文件成功: ${keysToDelete.join(', ')}`);
+        } catch (error) {
+          this.logger.error(`删除物理文件失败: ${keysToDelete.join(', ')}`, error);
+        }
+
+        // 删除文件记录
+        await this.fileRepository.remove(file);
+        this.logger.log(`删除文件记录成功: ${fileId}`);
+      }
+    } else {
+      this.logger.log(`文件仍被其他图片引用，仅删除图片记录: imageId=${id}, fileId=${fileId}`);
+    }
   }
 
   /**
@@ -212,10 +275,10 @@ export class ImageService {
   }
 
   /**
-   * 根据哈希值查找图片（用于去重）
+   * 根据哈希值查找文件（用于去重）
    */
-  async findByHash(hash: string): Promise<Image | null> {
-    return this.imageRepository.findOneBy({ hash });
+  async findFileByHash(hash: string): Promise<File | null> {
+    return this.fileRepository.findOneBy({ hash });
   }
 
   /**
