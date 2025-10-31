@@ -8,7 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ConfigValidationService } from './config/config-validation.service';
-import { CacheModule } from './common/cache/cache.module';
+import { SimpleCacheModule } from './common/cache';
 // 声明模块的依赖与组成。
 @Module({
   imports: [
@@ -36,7 +36,7 @@ import { CacheModule } from './common/cache/cache.module';
     // 导入 ModulesModule 以包含所有业务模块。
     ModulesModule,
     // 导入缓存模块
-    CacheModule,
+    SimpleCacheModule,
   ],
   // 声明 AppController 为控制器，AppService 为服务提供者。
   controllers: [AppController],
