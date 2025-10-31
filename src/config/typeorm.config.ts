@@ -9,7 +9,7 @@ const AppDataSource = new DataSource({
   // 配置数据库连接信息
   type: 'postgres',
   host: configService.get<string>('DB_HOST', 'localhost'),
-  port: Number.parseInt(configService.get<string>('DB_PORT', '5432')),
+  port: Number.parseInt(configService.get<string>('DB_PORT', '5432'), 10),
   username: configService.get<string>('DB_USERNAME', 'postgres'),
   password: configService.get<string>('DB_PASSWORD', 'your_password'),
   database: configService.get<string>('DB_DATABASE', 'nest_eidos'),

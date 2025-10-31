@@ -20,7 +20,7 @@ import { ConfigValidationService } from './config/config-validation.service';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get('DB_HOST', 'localhost'),
-        port: Number.parseInt(configService.get<string>('DB_PORT', '5432')),
+        port: Number.parseInt(configService.get<string>('DB_PORT', '5432'), 10),
         username: configService.get('DB_USERNAME', 'postgres'),
         password: configService.get('DB_PASSWORD', 'your_password'),
         database: configService.get('DB_DATABASE', 'nest_eidos'),
