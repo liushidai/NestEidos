@@ -24,12 +24,19 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
   private readonly bucket: string;
 
   constructor(private readonly configService: ConfigService) {
-    const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
+    let endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
     const port = parseInt(this.configService.get<string>('MINIO_PORT', '9000'));
     const useSSL = this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
     const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY');
     const secretKey = this.configService.get<string>('MINIO_SECRET_KEY');
     this.bucket = this.configService.get<string>('MINIO_BUCKET', 'images');
+
+    // 移除 URL 前缀，MinIO 客户端只需要主机名
+    if (endPoint.startsWith('http://')) {
+      endPoint = endPoint.replace('http://', '');
+    } else if (endPoint.startsWith('https://')) {
+      endPoint = endPoint.replace('https://', '');
+    }
 
     if (!accessKey || !secretKey) {
       throw new Error('MinIO 凭据未配置: MINIO_ACCESS_KEY 和 MINIO_SECRET_KEY 环境变量是必需的');
