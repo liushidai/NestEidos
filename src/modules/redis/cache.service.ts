@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cacheable } from 'cacheable';
-import { TTL_CONFIGS, TTLUtils, TTLConfig } from '../common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils, TTLConfig } from '../../common/ttl/tls.config';
 import { CacheMonitorService } from './cache-monitor.service';
 
 /**

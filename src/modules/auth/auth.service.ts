@@ -9,7 +9,7 @@ import { LoginUserDto } from '../user/dto/login-user.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { Inject } from '@nestjs/common';
-import { TTL_CONFIGS, TTLUtils } from '../common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils } from '../../common/ttl/tls.config';
 
 @Injectable()
 export class AuthService {
