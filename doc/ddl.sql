@@ -95,13 +95,13 @@ CREATE TABLE image (
     album_id BIGINT NOT NULL DEFAULT 0,
     original_name VARCHAR(255) NOT NULL,
     title VARCHAR(255),
-    file_id BIGINT NOT NULL REFERENCES file(id) ON DELETE CASCADE,
+    file_id BIGINT NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
 -- 表注释
-COMMENT ON TABLE image IS '图片业务元数据表，关联 file 表实现内容去重';
+COMMENT ON TABLE image IS '图片业务元数据表，通过 file_id 关联 file 表（由代码层维护关联关系）';
 
 -- 字段注释
 COMMENT ON COLUMN image.id IS '图片ID，由程序使用雪花算法生成';
@@ -109,6 +109,6 @@ COMMENT ON COLUMN image.user_id IS '所属用户ID，关联 user.id';
 COMMENT ON COLUMN image.album_id IS '所属相册ID；若未归属任何相册，则为0';
 COMMENT ON COLUMN image.original_name IS '原始文件名（含扩展名），如 photo.jpg';
 COMMENT ON COLUMN image.title IS '图片标题，用户可自定义，可为空';
-COMMENT ON COLUMN image.file_id IS '引用 file.id，指向实际文件内容元数据';
+COMMENT ON COLUMN image.file_id IS '关联的文件记录ID（由代码层维护与 file 表的关联关系）';
 COMMENT ON COLUMN image.created_at IS '创建时间，由程序插入时提供';
 COMMENT ON COLUMN image.updated_at IS '更新时间，由程序在每次更新时提供';
