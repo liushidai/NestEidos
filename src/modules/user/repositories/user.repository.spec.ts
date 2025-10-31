@@ -31,6 +31,7 @@ describe('UserRepository', () => {
     const mockCacheService = {
       get: jest.fn(),
       set: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -96,38 +97,62 @@ describe('UserRepository', () => {
   });
 
   describe('findByUserName', () => {
-    it('should return user from database directly (no cache)', async () => {
+    it('should return user from cache if found', async () => {
+      cacheService.get.mockResolvedValue(mockUser);
+
+      const result = await userRepository.findByUserName('testuser');
+
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'));
+      expect(result).toEqual(mockUser);
+      expect(mockRepository.findOneBy).not.toHaveBeenCalled();
+    });
+
+    it('should return user from database if not in cache', async () => {
+      cacheService.get.mockResolvedValue(undefined);
       mockRepository.findOneBy.mockResolvedValue(mockUser);
 
       const result = await userRepository.findByUserName('testuser');
 
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'));
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ userName: 'testuser' });
-      expect(cacheService.get).not.toHaveBeenCalled();
-      expect(cacheService.set).not.toHaveBeenCalled();
+      expect(cacheService.set).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'), mockUser, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
       expect(result).toEqual(mockUser);
     });
 
     it('should return null if user not found by username', async () => {
+      cacheService.get.mockResolvedValue(undefined);
       mockRepository.findOneBy.mockResolvedValue(null);
 
       const result = await userRepository.findByUserName('nonexistent');
 
+      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'nonexistent'));
       expect(mockRepository.findOneBy).toHaveBeenCalledWith({ userName: 'nonexistent' });
+      expect(cacheService.set).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });
 
   describe('create', () => {
-    it('should create user', async () => {
+    it('should create user and clear username cache', async () => {
       const userData = { userName: 'newuser', passWord: 'password', userType: 10 };
-      const newUser = { ...mockUser, ...userData };
-      mockRepository.create.mockReturnValue(newUser as any);
+      const newUser = {
+        id: '9876543210987654321',
+        userName: 'newuser',
+        passWord: 'hashedpassword',
+        userType: 10,
+        userStatus: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as User;
+
+      mockRepository.create.mockReturnValue(newUser);
       mockRepository.save.mockResolvedValue(newUser);
 
       const result = await userRepository.create(userData);
 
       expect(mockRepository.create).toHaveBeenCalledWith(userData);
       expect(mockRepository.save).toHaveBeenCalledWith(newUser);
+      expect(cacheService.delete).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'newuser'));
       expect(result).toEqual(newUser);
     });
   });

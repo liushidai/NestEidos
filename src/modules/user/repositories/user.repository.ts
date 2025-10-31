@@ -46,12 +46,30 @@ export class UserRepository {
   }
 
   /**
-   * 根据用户名查找用户（无缓存，仅用于内部业务逻辑）
-   * 注意：此方法不使用缓存，仅用于需要实时查询的业务场景
+   * 根据用户名查找用户（带缓存）
+   * 注意：用户名不允许修改，可以安全地缓存
    */
   async findByUserName(userName: string): Promise<User | null> {
     try {
-      return await this.userRepository.findOneBy({ userName });
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', userName);
+
+      // 尝试从缓存获取
+      const cachedUser = await this.cacheService.get<User>(cacheKey);
+      if (cachedUser) {
+        this.logger.debug(`从缓存获取用户（用户名）: ${userName}`);
+        return cachedUser;
+      }
+
+      // 缓存未命中，从数据库获取
+      this.logger.debug(`从数据库获取用户（用户名）: ${userName}`);
+      const user = await this.userRepository.findOneBy({ userName });
+
+      // 缓存结果（24小时）
+      if (user) {
+        await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+      }
+
+      return user;
     } catch (error) {
       this.logger.error(`根据用户名查找用户失败: ${userName}`, error.stack);
       throw error;
@@ -65,6 +83,13 @@ export class UserRepository {
     try {
       const user = this.userRepository.create(userData);
       const savedUser = await this.userRepository.save(user);
+
+      // 预先清理用户名缓存，防止创建同名用户时的缓存冲突
+      if (savedUser.userName) {
+        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', savedUser.userName);
+        await this.cacheService.delete(usernameCacheKey);
+        this.logger.debug(`清理用户名缓存: ${savedUser.userName}`);
+      }
 
       this.logger.log(`创建用户成功: ${savedUser.userName}`);
       return savedUser;
