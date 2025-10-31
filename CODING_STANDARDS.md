@@ -240,78 +240,25 @@ describe('UserService', () => {
 
 ### 1. Repository 层职责
 
-**原则：** Repository 层专门负责数据访问操作，与数据库进行交互，不包含业务逻辑。
+**原则：** Repository 层负责数据访问操作和缓存管理，封装数据库交互逻辑，为上层 Service 提供统一的数据访问接口。
 
 **文件位置：** `src/modules/{module-name}/repositories/{entity-name}.repository.ts`
+
+**核心职责：**
+- 数据库 CRUD 操作
+- Redis 缓存管理
+- 数据一致性保证
+- 性能优化（缓存策略）
 
 **示例：**
 ```typescript
 @Injectable()
 export class UserRepository {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
-
-  async findById(id: string): Promise<User | null> {
-    try {
-      return await this.userRepository.findOneBy({ id });
-    } catch (error) {
-      this.logger.error(`根据ID查找用户失败: ${id}`, error.stack);
-      throw error;
-    }
-  }
-
-  async create(userData: Partial<User>): Promise<User> {
-    try {
-      const user = this.userRepository.create(userData);
-      return await this.userRepository.save(user);
-    } catch (error) {
-      this.logger.error(`创建用户失败: ${userData.userName}`, error.stack);
-      throw error;
-    }
-  }
-}
-```
-
-### 2. Repository 层命名规范
-
-- 类名：`{EntityName}Repository`（如 `UserRepository`）
-- 文件名：`{entity-name}.repository.ts`
-- 方法名：使用描述性的动词，如 `findById`、`findByUserName`、`create`、`update`、`delete`
-
-### 3. 错误处理
-
-- 所有数据库操作都应包含 try-catch 块
-- 使用结构化日志记录错误信息
-- 重新抛出异常供上层处理
-
-## 缓存设计规范
-
-### 1. 缓存策略
-
-**原则：** 使用 Redis 作为缓存层，优先从缓存获取数据，缓存未命中时访问数据库并更新缓存。
-
-**缓存键命名规范：**
-```
-{module}:{type}:{identifier}
-```
-
-**示例：**
-- `user:id:1234567890123456789` - 根据 ID 缓存用户
-- `user:username:testuser` - 根据用户名缓存用户
-- `user:exists:username:testuser` - 用户名存在性检查缓存
-
-### 2. 缓存实现
-
-**Service 层缓存集成示例：**
-```typescript
-@Injectable()
-export class UserService {
   private readonly CACHE_TTL = 3600; // 1小时缓存
 
   constructor(
-    private readonly userRepository: UserRepository,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -325,7 +272,87 @@ export class UserService {
     }
 
     // 缓存未命中，从数据库获取
-    const user = await this.userRepository.findById(id);
+    const user = await this.userRepository.findOneBy({ id });
+    if (user) {
+      await this.cacheService.set(cacheKey, user, this.CACHE_TTL);
+    }
+
+    return user;
+  }
+
+  async create(userData: Partial<User>): Promise<User> {
+    const user = this.userRepository.create(userData);
+    const savedUser = await this.userRepository.save(user);
+
+    // 清理相关缓存
+    await this.clearUserCache(savedUser.id, savedUser.userName);
+
+    return savedUser;
+  }
+}
+```
+
+### 2. Repository 层命名规范
+
+- 类名：`{EntityName}Repository`（如 `UserRepository`）
+- 文件名：`{entity-name}.repository.ts`
+- 方法名：使用描述性的动词，如 `findById`、`findByUserName`、`create`、`update`、`delete`
+
+### 3. 缓存管理职责
+
+- **缓存策略定义**：在 Repository 层定义 TTL 和缓存键规则
+- **缓存操作封装**：统一管理缓存的设置、获取、清理
+- **数据一致性**：确保缓存与数据库数据的一致性
+- **性能优化**：通过减少数据库访问提升性能
+
+### 4. 错误处理
+
+- 所有数据库操作都应包含 try-catch 块
+- 使用结构化日志记录错误信息
+- 重新抛出异常供上层处理
+- 缓存操作失败不应影响主要功能
+
+## 缓存设计规范
+
+### 1. 缓存策略
+
+**原则：** 缓存控制逻辑集中在 Repository 层，实现透明的缓存管理，上层 Service 无需关心缓存细节。
+
+**缓存键命名规范：**
+```
+{module}:{type}:{identifier}
+```
+
+**示例：**
+- `user:id:1234567890123456789` - 根据 ID 缓存用户
+- `user:username:testuser` - 根据用户名缓存用户
+- `user:exists:username:testuser` - 用户名存在性检查缓存
+
+### 2. Repository 层缓存实现
+
+**Repository 层负责所有缓存操作：**
+```typescript
+@Injectable()
+export class UserRepository {
+  private readonly CACHE_TTL = 3600; // 1小时缓存
+  private readonly EXISTS_CACHE_TTL = 300; // 5分钟缓存
+
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly cacheService: CacheService,
+  ) {}
+
+  async findById(id: string): Promise<User | null> {
+    const cacheKey = `user:id:${id}`;
+
+    // Repository 层统一处理缓存逻辑
+    const cachedUser = await this.cacheService.get<User>(cacheKey);
+    if (cachedUser) {
+      return cachedUser;
+    }
+
+    const user = await this.userRepository.findOneBy({ id });
     if (user) {
       await this.cacheService.set(cacheKey, user, this.CACHE_TTL);
     }
@@ -335,56 +362,64 @@ export class UserService {
 }
 ```
 
-### 3. 缓存失效管理
+### 3. Service 层简化
 
-**原则：** 在数据变更时主动清理相关缓存，确保数据一致性。
+**Service 层专注于业务逻辑，不处理缓存：**
+```typescript
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly userRepository: UserRepository,
+  ) {}
+
+  async findById(id: string): Promise<User | null> {
+    // Service 层直接调用 Repository，无需关心缓存
+    return this.userRepository.findById(id);
+  }
+}
+```
+
+### 4. 缓存失效管理
+
+**原则：** Repository 层自动管理缓存失效，确保数据一致性。
 
 ```typescript
+// 在 Repository 中的数据变更方法里自动清理缓存
+async create(userData: Partial<User>): Promise<User> {
+  const user = this.userRepository.create(userData);
+  const savedUser = await this.userRepository.save(user);
+
+  // 自动清理相关缓存
+  await this.clearUserCache(savedUser.id, savedUser.userName);
+
+  return savedUser;
+}
+
 private async clearUserCache(
   userId?: string,
   oldUserName?: string,
   newUserName?: string,
 ): Promise<void> {
+  // 智能缓存清理逻辑
   const keysToDelete: string[] = [];
-
-  if (userId) {
-    keysToDelete.push(`user:id:${userId}`);
-  }
-
-  // 清理用户名相关的缓存
-  const userNames = new Set<string>();
-  if (oldUserName) userNames.add(oldUserName);
-  if (newUserName && newUserName !== oldUserName) userNames.add(newUserName);
-
-  for (const userName of userNames) {
-    keysToDelete.push(`user:username:${userName}`);
-    keysToDelete.push(`user:exists:username:${userName}`);
-  }
-
-  // 批量删除缓存
-  const deletePromises = keysToDelete.map(key =>
-    this.cacheService.delete(key).catch(error =>
-      this.logger.warn(`清理缓存失败: ${key}`, error.stack)
-    )
-  );
-
-  await Promise.all(deletePromises);
+  // ... 缓存清理实现
 }
 ```
 
-### 4. 缓存 TTL 建议
+### 5. 缓存 TTL 建议
 
 - **用户数据：** 1-4 小时（用户信息变化不频繁）
 - **存在性检查：** 5-15 分钟（可能经常变化）
 - **配置数据：** 30 分钟-2 小时
 - **临时数据：** 1-10 分钟
 
-### 5. 缓存注意事项
+### 6. 缓存注意事项
 
-- 缓存键要使用有意义的前缀，避免冲突
-- 敏感数据不应该缓存在明文中
-- 缓存失败不应该影响主要功能，要有降级策略
-- 定期监控缓存命中率和性能指标
+- **透明性**：Repository 层提供透明的缓存服务
+- **一致性**：数据变更时自动清理相关缓存
+- **降级策略**：缓存失败不影响主要功能
+- **监控**：定期监控缓存命中率和性能指标
+- **安全性**：敏感数据不应缓存在明文中
 
 ## 模块依赖规范
 
