@@ -2,8 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { SimpleCacheService } from '@/common/cache';
-import { TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/common/ttl/tls.config';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/cache';
 
 @Injectable()
 export class UserRepository {

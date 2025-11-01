@@ -2,9 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
-import { SimpleCacheService } from '@/common/cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/cache';
 import { User } from '../entities/user.entity';
-import { TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/common/ttl/tls.config';
 
 describe('UserRepository', () => {
   let userRepository: UserRepository;

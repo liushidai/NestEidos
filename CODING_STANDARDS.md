@@ -88,11 +88,15 @@ src/
 │       ├── repositories/     # 数据访问层（Repository）
 │       ├── guards/           # 守卫
 │       └── {module-name}.module.ts
-├── config/                   # 配置文件
-├── common/                   # 公共组件
-├── utils/                    # 工具函数
-├── pipes/                    # 管道
-└── redis/                    # Redis 缓存服务
+├── cache/                     # 统一缓存服务
+│   ├── core/                   # 核心缓存服务
+│   ├── config/                 # 缓存配置
+│   ├── monitoring/             # 缓存监控
+│   └── index.ts               # 统一导出
+├── config/                     # 配置文件
+├── common/                     # 公共组件
+├── utils/                      # 工具函数
+└── pipes/                      # 管道
 ```
 
 ### 2. 导入顺序
@@ -139,6 +143,127 @@ export class UserEntity {
 - 使用环境变量配置数据库连接
 - 生产环境禁用 `synchronize`
 - 启用连接池配置
+
+## 缓存设计
+
+### 1. Repository 层缓存
+
+**原则：** Repository 层负责数据访问和缓存管理，Service 层专注业务逻辑。
+
+**缓存目录结构：**
+```
+src/cache/
+├── core/                   # 核心缓存服务
+│   ├── cache.module.ts     # 缓存模块
+│   ├── cache.service.ts    # 缓存服务
+│   └── simple-cache.service.ts
+├── config/                 # 缓存配置
+│   └── ttl.config.ts      # TTL 配置
+├── monitoring/             # 缓存监控
+│   ├── cache-monitor.service.ts
+│   └── redis.module.ts
+└── index.ts               # 统一导出
+```
+
+**缓存键命名规范：**
+```typescript
+// ✅ 正确：使用 CacheKeyUtils 生成统一缓存键
+const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', userId);
+
+// 缓存键格式：repo:module:type:identifier
+// 示例：repo:user:id:123456789
+// 示例：repo:user:username:john_doe
+```
+
+**TTL 配置规范：**
+```typescript
+// ✅ 正确：使用预定义的 TTL 配置
+private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE);
+
+// TTL 配置类型：
+// LONG_CACHE: 24小时 (86400秒)
+// MEDIUM_CACHE: 30分钟 (1800秒)
+// SHORT_CACHE: 5分钟 (300秒)
+```
+
+### 2. 缓存使用模式
+
+**读取操作（带缓存）：**
+```typescript
+// ✅ Repository 层实现
+async findById(id: string): Promise<User | null> {
+  const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
+
+  // 尝试从缓存获取
+  let user = await this.cacheService.get<User>(cacheKey);
+  if (user) {
+    return user;
+  }
+
+  // 缓存未命中，从数据库获取
+  user = await this.userRepository.findOneBy({ id });
+  if (user) {
+    await this.cacheService.set(cacheKey, user, this.CACHE_TTL);
+  }
+
+  return user;
+}
+```
+
+**写入操作（清理缓存）：**
+```typescript
+// ✅ 更新操作后清理相关缓存
+async update(id: string, updateData: Partial<User>): Promise<User> {
+  const user = await this.findById(id);
+  if (!user) {
+    throw new NotFoundException('用户不存在');
+  }
+
+  const updatedUser = { ...user, ...updateData };
+  await this.userRepository.save(updatedUser);
+
+  // 清理缓存
+  const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
+  await this.cacheService.delete(cacheKey);
+
+  return updatedUser;
+}
+```
+
+### 3. 缓存监控
+
+**性能监控：**
+```typescript
+// 缓存服务自动记录操作指标
+this.monitorService.recordOperation('get', responseTime);
+this.monitorService.recordOperation('set', responseTime);
+this.monitorService.recordOperation('delete', responseTime);
+```
+
+**健康检查：**
+- 监控缓存命中率
+- 跟踪响应时间
+- 记录错误率
+
+### 4. 缓存导入规范
+
+```typescript
+// ✅ 正确：从统一缓存模块导入
+import {
+  SimpleCacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  CacheKeyUtils,
+  CacheModule
+} from '@/cache';
+
+// 模块导入
+@Module({
+  imports: [TypeOrmModule.forFeature([User]), CacheModule],
+  providers: [UserService, UserRepository],
+  exports: [UserService, UserRepository],
+})
+```
 
 ## API 设计
 

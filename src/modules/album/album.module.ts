@@ -5,10 +5,10 @@ import { AlbumService } from './album.service';
 import { AlbumRepository } from './repositories/album.repository';
 import { ProtectedAlbumController } from './protected-album.controller';
 import { AuthModule } from '../auth/auth.module';
-import { SimpleCacheModule } from '@/common/cache';
+import { CacheModule } from '@/cache';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Album]), AuthModule, SimpleCacheModule],
+  imports: [TypeOrmModule.forFeature([Album]), AuthModule, CacheModule],
   controllers: [ProtectedAlbumController],
   providers: [AlbumService, AlbumRepository],
   exports: [AlbumService, AlbumRepository],

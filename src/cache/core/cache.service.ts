@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cacheable } from 'cacheable';
-import { TTL_CONFIGS, TTLUtils, TTLConfig } from '../../common/ttl/tls.config';
-import { CacheMonitorService } from './cache-monitor.service';
+import { TTL_CONFIGS, TTLUtils, TTLConfig } from '../config/ttl.config';
+import { CacheMonitorService } from '../monitoring/cache-monitor.service';
 
 /**
  * 缓存操作异常
@@ -63,10 +63,7 @@ export class CacheService {
       const responseTime = Date.now() - startTime;
 
       // 记录监控指标
-      this.monitorService.recordOperation(
-        result !== undefined ? 'get_hits' : 'get_misses',
-        responseTime
-      );
+      this.monitorService.recordOperation('get', responseTime);
 
       this.logger.debug(`获取缓存成功: ${key}, 结果: ${result !== undefined ? '命中' : '未命中'}, 延迟: ${responseTime}ms`);
       return result;

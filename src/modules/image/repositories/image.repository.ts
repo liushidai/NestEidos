@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Image } from '../entities/image.entity';
 import { File } from '../entities/file.entity';
-import { SimpleCacheService } from '../../../common/cache';
-import { TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../common/ttl/tls.config';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/cache';
 
 @Injectable()
 export class ImageRepository {

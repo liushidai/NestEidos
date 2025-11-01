@@ -1,12 +1,11 @@
 import { Injectable, UnauthorizedException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
-import { CacheService } from '../redis/cache.service';
+import { CacheService, TTL_CONFIGS, TTLUtils, TTLUnit } from '@/cache';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { TTL_CONFIGS, TTLUtils, TTLUnit } from '../../common/ttl/tls.config';
 import { UserRepository } from '../user/repositories/user.repository';
 
 @Injectable()

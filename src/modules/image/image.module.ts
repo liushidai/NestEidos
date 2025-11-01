@@ -12,14 +12,14 @@ import { AuthModule } from '../auth/auth.module';
 import { StorageService } from '../../services/storage.service';
 import { TempFileService } from '../../services/temp-file.service';
 import { SecureIdUtil } from '../../utils/secure-id.util';
-import { SimpleCacheModule } from '../../common/cache';
+import { CacheModule } from '@/cache';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Image, File]),
     AuthModule,
     ConfigModule,
-    SimpleCacheModule,
+    CacheModule,
   ],
   controllers: [ProtectedImageController, ImageUploadController],
   providers: [

@@ -2,9 +2,9 @@ import { Module, Global } from '@nestjs/common';
 import { Cacheable } from 'cacheable';
 import KeyvRedis from '@keyv/redis';
 import { redisConfig } from '../../config/redis.config';
-import { CacheService } from './cache.service';
+import { CacheService } from '../core/cache.service';
 import { CacheMonitorService } from './cache-monitor.service';
-import { TTL_CONFIGS, TTLUtils } from '../../common/ttl/tls.config';
+import { TTL_CONFIGS, TTLUtils } from '../config/ttl.config';
 
 @Global()
 @Module({

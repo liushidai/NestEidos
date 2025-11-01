@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
 import { File } from '../entities/file.entity';
 import { ImageRepository } from './image.repository';
-import { SimpleCacheService } from '../../../common/cache';
-import { TTL_CONFIGS, TTLUtils } from '../../../common/ttl/tls.config';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils } from '@/cache';
 
 describe('ImageRepository', () => {
   let repository: ImageRepository;

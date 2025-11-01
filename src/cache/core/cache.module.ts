@@ -2,8 +2,8 @@ import { Module, Global } from '@nestjs/common';
 import { SimpleCacheService } from './simple-cache.service';
 
 /**
- * 简单缓存模块
- * 提供基本的缓存功能
+ * 缓存模块
+ * 提供统一的缓存功能
  */
 @Global()
 @Module({
@@ -27,4 +27,4 @@ import { SimpleCacheService } from './simple-cache.service';
   ],
   exports: [SimpleCacheService],
 })
-export class SimpleCacheModule {}
+export class CacheModule {}

@@ -3,8 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { File } from '../entities/file.entity';
 import { FileRepository } from './file.repository';
-import { SimpleCacheService } from '../../../common/cache';
-import { TTL_CONFIGS, TTLUtils } from '../../../common/ttl/tls.config';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils } from '@/cache';
 
 describe('FileRepository', () => {
   let repository: FileRepository;

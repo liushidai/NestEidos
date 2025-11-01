@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { Cacheable } from 'cacheable';
-import { TTLUtils } from '../../common/ttl/tls.config';
+import { TTLUtils } from '../config/ttl.config';
 
 export interface CacheMetrics {
   hits: number;

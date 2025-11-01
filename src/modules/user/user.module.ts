@@ -5,10 +5,10 @@ import { UserService } from './user.service';
 import { UserRepository } from './repositories/user.repository';
 import { ProtectedUserController } from './protected-user.controller';
 import { AuthModule } from '../auth/auth.module';
-import { SimpleCacheModule } from '@/common/cache';
+import { CacheModule } from '@/cache';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), AuthModule, SimpleCacheModule],
+  imports: [TypeOrmModule.forFeature([User]), AuthModule, CacheModule],
   controllers: [ProtectedUserController],
   providers: [UserService, UserRepository],
   exports: [UserService, UserRepository],
