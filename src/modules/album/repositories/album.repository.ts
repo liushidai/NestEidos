@@ -1,14 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Album } from '../entities/album.entity';
 import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class AlbumRepository {
   private readonly logger = new Logger(AlbumRepository.name);
-  private readonly redisKeyPrefix: string;
   private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE); // 2小时缓存
   private readonly NULL_CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE); // 5分钟缓存空值
 
@@ -16,18 +14,14 @@ export class AlbumRepository {
     @InjectRepository(Album)
     private readonly albumRepository: Repository<Album>,
     private readonly cacheService: CacheService,
-    private readonly configService: ConfigService,
-  ) {
-    // 使用配置中的 REDIS_KEY_PREFIX
-    this.redisKeyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
-  }
+  ) {}
 
   /**
    * 根据ID查找相册（带缓存，支持缓存穿透防护）
    */
   async findById(id: string): Promise<Album | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'album', 'id', id);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('album', 'id', id);
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
@@ -68,7 +62,7 @@ export class AlbumRepository {
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Album | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'album', 'user_album', `${userId}:${id}`);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('album', 'user_album', `${userId}:${id}`);
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
@@ -236,11 +230,11 @@ export class AlbumRepository {
   private async clearAlbumCache(albumId: string, userId: string): Promise<void> {
     try {
       // 清理相册ID缓存
-      const albumIdCacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'album', 'id', albumId);
+      const albumIdCacheKey = CacheKeyUtils.buildRepositoryKey('album', 'id', albumId);
       await this.cacheService.delete(albumIdCacheKey);
 
       // 清理用户相册缓存
-      const userAlbumCacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'album', 'user_album', `${userId}:${albumId}`);
+      const userAlbumCacheKey = CacheKeyUtils.buildRepositoryKey('album', 'user_album', `${userId}:${albumId}`);
       await this.cacheService.delete(userAlbumCacheKey);
 
       this.logger.debug(`清理相册缓存: albumId=${albumId}, userId=${userId}`);

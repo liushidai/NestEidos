@@ -11,17 +11,13 @@ import { UserRepository } from '../user/repositories/user.repository';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly redisKeyPrefix: string;
 
   constructor(
     private userRepository: UserRepository,
     private cacheService: CacheService,
     private configService: ConfigService,
     @Inject('TTL_CONFIGS') private readonly ttlConfigs: typeof TTL_CONFIGS,
-  ) {
-    // 使用配置中的 REDIS_KEY_PREFIX
-    this.redisKeyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
-  }
+  ) {}
 
   /**
    * 用户注册
@@ -51,7 +47,7 @@ export class AuthService {
    * 获取token的完整缓存键
    */
   private getTokenCacheKey(token: string): string {
-    return CacheKeyUtils.buildAuthKeyWithPrefix(this.redisKeyPrefix, 'token', token);
+    return CacheKeyUtils.buildAuthKey('token', token);
   }
 
   /**

@@ -1,31 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { User } from '../entities/user.entity';
 import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class UserRepository {
   private readonly logger = new Logger(UserRepository.name);
-  private readonly redisKeyPrefix: string;
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly cacheService: CacheService,
-    private readonly configService: ConfigService,
-  ) {
-    // 使用配置中的 REDIS_KEY_PREFIX
-    this.redisKeyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
-  }
+  ) {}
 
   /**
    * 根据ID查找用户（带缓存）
    */
   async findById(id: string): Promise<User | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'user', 'id', id);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
 
       // 尝试从缓存获取
       const cachedUser = await this.cacheService.get<User>(cacheKey);
@@ -56,7 +50,7 @@ export class UserRepository {
    */
   async findByUserName(userName: string): Promise<User | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'user', 'username', userName);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', userName);
 
       // 尝试从缓存获取
       const cachedUser = await this.cacheService.get<User>(cacheKey);
@@ -91,7 +85,7 @@ export class UserRepository {
 
       // 预先清理用户名缓存，防止创建同名用户时的缓存冲突
       if (savedUser.userName) {
-        const usernameCacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'user', 'username', savedUser.userName);
+        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', savedUser.userName);
         await this.cacheService.delete(usernameCacheKey);
         this.logger.debug(`清理用户名缓存: ${savedUser.userName}`);
       }
