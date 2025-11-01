@@ -2,29 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ImageUploadController } from './image-upload.controller';
 import { ImageService } from './image.service';
 import { Image } from './entities/image.entity';
-import { File } from './entities/file.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 
 describe('ImageUploadController', () => {
   let controller: ImageUploadController;
   let imageService: jest.Mocked<ImageService>;
-
-  const mockFile: File = {
-    id: '1234567890123456790',
-    hash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
-    fileSize: 1024000,
-    mimeType: 'image/jpeg',
-    width: 1920,
-    height: 1080,
-    originalKey: 'images/test.jpg',
-    webpKey: 'images/test.webp',
-    avifKey: 'images/test.avif',
-    hasWebp: true,
-    hasAvif: true,
-    convertWebpParamId: null,
-    convertAvifParamId: null,
-    createdAt: new Date(),
-  };
 
   const mockImage: Image = {
     id: '1234567890123456789',
@@ -32,13 +14,28 @@ describe('ImageUploadController', () => {
     albumId: '0',
     originalName: 'test.jpg',
     title: '测试图片',
-    fileId: mockFile.id,
+    imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+    imageSize: 1024000,
+    imageMimeType: 'image/jpeg',
+    imageWidth: 1920,
+    imageHeight: 1080,
+    originalKey: 'originals/test.jpg',
+    jpegKey: 'processed/test.jpg',
+    webpKey: 'processed/test.webp',
+    avifKey: 'processed/test.avif',
+    hasJpeg: true,
+    hasWebp: true,
+    hasAvif: true,
+    convertJpegParamId: null,
+    convertWebpParamId: null,
+    convertAvifParamId: null,
+    defaultFormat: 'avif',
+    expirePolicy: 1,
+    expiresAt: new Date('9999-12-31T23:59:59Z'),
+    nsfwScore: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    file: mockFile,
-    user: {} as any,
-    album: null,
-  };
+  } as any;
 
   const mockUser = {
     userId: '1234567890123456788',

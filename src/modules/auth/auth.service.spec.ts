@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
-import { CacheService } from '../redis/cache.service';
+import { CacheService } from '@/cache';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {

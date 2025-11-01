@@ -297,19 +297,7 @@ describe('ImageRepository', () => {
     });
   });
 
-  describe('countByFileId', () => {
-    it('应该返回文件被引用的次数', async () => {
-      jest.spyOn(imageRepository, 'count').mockResolvedValue(3);
-
-      const result = await repository.countByFileId('file123');
-
-      expect(result).toBe(3);
-      expect(imageRepository.count).toHaveBeenCalledWith({
-        where: { fileId: 'file123' },
-      });
-    });
-  });
-
+  
   describe('updateAlbumId', () => {
     it('应该批量更新图片的相册ID', async () => {
       const mockQueryBuilder = {
