@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
 import { File } from '../entities/file.entity';
 import { ImageRepository } from './image.repository';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils } from '@/cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 describe('ImageRepository', () => {
   let repository: ImageRepository;
@@ -101,7 +101,7 @@ describe('ImageRepository', () => {
     });
 
     it('应该从数据库获取图片并缓存', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(imageRepository, 'findOne').mockResolvedValue(mockImage);
 
       const result = await repository.findById('123456789');
@@ -120,13 +120,17 @@ describe('ImageRepository', () => {
     });
 
     it('当图片不存在时应该返回null', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(imageRepository, 'findOne').mockResolvedValue(null);
 
       const result = await repository.findById('nonexistent');
 
       expect(result).toBeNull();
-      expect(cacheService.set).not.toHaveBeenCalled();
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:image:id:nonexistent',
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+      );
     });
   });
 
@@ -142,7 +146,7 @@ describe('ImageRepository', () => {
     });
 
     it('应该从数据库获取用户图片并缓存', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(imageRepository, 'findOne').mockResolvedValue(mockImage);
 
       const result = await repository.findByIdAndUserId('123456789', 'user123');
@@ -335,6 +339,87 @@ describe('ImageRepository', () => {
       expect(mockQueryBuilder.set).toHaveBeenCalledWith({ albumId: 'newAlbum' });
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('albumId = :oldAlbumId', { oldAlbumId: 'oldAlbum' });
       expect(mockQueryBuilder.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe('缓存穿透防护', () => {
+    it('应该缓存空值防止缓存穿透 - findById', async () => {
+      const cacheKey = 'repo:image:id:nonexistent';
+
+      // 第一次查询 - 缓存未命中，数据库返回null
+      jest.spyOn(imageRepository, 'findOne').mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
+
+      let result1 = await repository.findById('nonexistent');
+      expect(result1).toBeNull();
+
+      // 验证数据库被调用
+      expect(imageRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'nonexistent' },
+        relations: ['file'],
+      });
+
+      // 验证空值被缓存
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        cacheKey,
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+      );
+
+      // 第二次查询 - 从缓存获取空值标记
+      jest.spyOn(imageRepository, 'findOne').mockClear();
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      let result2 = await repository.findById('nonexistent');
+      expect(result2).toBeNull();
+
+      // 验证数据库不再被调用
+      expect(imageRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('应该缓存空值防止缓存穿透 - findByIdAndUserId', async () => {
+      const cacheKey = 'repo:image:user_image:user123:nonexistent';
+
+      // 第一次查询 - 缓存未命中，数据库返回null
+      jest.spyOn(imageRepository, 'findOne').mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
+
+      let result1 = await repository.findByIdAndUserId('nonexistent', 'user123');
+      expect(result1).toBeNull();
+
+      // 验证数据库被调用
+      expect(imageRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'nonexistent', userId: 'user123' },
+        relations: ['file'],
+      });
+
+      // 验证空值被缓存
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        cacheKey,
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+      );
+
+      // 第二次查询 - 从缓存获取空值标记
+      jest.spyOn(imageRepository, 'findOne').mockClear();
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      let result2 = await repository.findByIdAndUserId('nonexistent', 'user123');
+      expect(result2).toBeNull();
+
+      // 验证数据库不再被调用
+      expect(imageRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('应该正确识别和返回缓存的空值', async () => {
+      // 模拟缓存中存储了空值标记
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      const result = await repository.findById('nonexistent');
+
+      expect(result).toBeNull();
+      expect(mockCacheService.get).toHaveBeenCalledWith('repo:image:id:nonexistent');
+      expect(imageRepository.findOne).not.toHaveBeenCalled();
     });
   });
 });

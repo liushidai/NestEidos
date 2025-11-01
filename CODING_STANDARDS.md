@@ -544,7 +544,132 @@ const tokenKey = CacheKeyUtils.buildAuthKey('token', tokenId);
 // 结果: 'auth:token:abc123'
 ```
 
-#### 3.3 TTL 策略
+#### 3.3 缓存穿透防护
+
+**问题背景**：缓存穿透是指大量请求查询不存在的数据，导致请求直接穿透缓存访问数据库，造成数据库压力剧增。
+
+**解决方案**：缓存空值（NULL Cache），当数据库查询结果为null时，将null值的标记缓存到Redis中。
+
+**核心实现**：
+```typescript
+// TTL配置增加空值缓存时间
+const TTL_CONFIGS = {
+  LONG_CACHE: { value: 2, unit: 'hours' },     // 2小时 - 正常数据缓存
+  NULL_CACHE: { value: 5, unit: 'minutes' },   // 5分钟 - 空值缓存
+  // ... 其他配置
+};
+
+// 空值标记常量
+const NULL_CACHE_VALUES = {
+  NULL_PLACEHOLDER: '__NULL_CACHE_PLACEHOLDER__',
+};
+```
+
+**Repository层实现**：
+```typescript
+async findById(id: string): Promise<User | null> {
+  const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
+
+  // 尝试从缓存获取
+  const cachedUser = await this.cacheService.get<User>(cacheKey);
+  if (cachedUser !== undefined) {
+    // 检查是否为缓存的空值标记
+    if (TTLUtils.isNullCacheValue(cachedUser)) {
+      this.logger.debug(`从缓存获取空值标记（缓存穿透防护）: ${id}`);
+      return null;
+    }
+    this.logger.debug(`从缓存获取用户: ${id}`);
+    return cachedUser;
+  }
+
+  // 缓存未命中，从数据库获取
+  this.logger.debug(`从数据库获取用户: ${id}`);
+  const user = await this.userRepository.findOneBy({ id });
+
+  // 缓存结果（无论是否存在都缓存）
+  if (user) {
+    await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE));
+    this.logger.debug(`缓存用户数据: ${id}, TTL: ${this.CACHE_TTL}秒`);
+  } else {
+    // 缓存空值，防止缓存穿透
+    const nullMarker = TTLUtils.toCacheableNullValue<User>();
+    await this.cacheService.set(cacheKey, nullMarker, TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE));
+    this.logger.debug(`缓存空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
+  }
+
+  return user;
+}
+```
+
+**空值处理工具类**：
+```typescript
+export class TTLUtils {
+  /**
+   * 判断是否为缓存的空值标记
+   */
+  static isNullCacheValue<T>(value: T): boolean {
+    return value === NULL_CACHE_VALUES.NULL_PLACEHOLDER;
+  }
+
+  /**
+   * 创建可缓存的空值标记
+   */
+  static toCacheableNullValue<T>(): T {
+    return NULL_CACHE_VALUES.NULL_PLACEHOLDER as T;
+  }
+
+  /**
+   * 从缓存值中提取真实值（处理空值标记）
+   */
+  static fromCachedValue<T>(cachedValue: T): T | null {
+    if (this.isNullCacheValue(cachedValue)) {
+      return null;
+    }
+    return cachedValue;
+  }
+}
+```
+
+**缓存穿透防护策略**：
+- **缓存时间**：空值缓存5分钟，正常数据缓存2小时
+- **防护范围**：所有Repository层的`findById`、`findByIdAndUserId`等查询方法
+- **更新清理**：当数据更新时，会自动清理相关的空值缓存
+- **监控日志**：记录缓存穿透防护的触发情况
+
+**测试验证**：
+```typescript
+describe('缓存穿透防护', () => {
+  it('应该缓存空值防止缓存穿透', async () => {
+    const cacheKey = 'repo:user:id:nonexistent';
+
+    // 第一次查询 - 缓存未命中，数据库返回null
+    jest.spyOn(userRepository, 'findOneBy').mockResolvedValue(null);
+    mockCacheService.get.mockResolvedValue(undefined);
+
+    let result1 = await repository.findById('nonexistent');
+    expect(result1).toBeNull();
+
+    // 验证空值被缓存
+    expect(mockCacheService.set).toHaveBeenCalledWith(
+      cacheKey,
+      NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+      TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+    );
+
+    // 第二次查询 - 从缓存获取空值标记
+    mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+    jest.spyOn(userRepository, 'findOneBy').mockClear();
+
+    let result2 = await repository.findById('nonexistent');
+    expect(result2).toBeNull();
+
+    // 验证数据库不再被调用
+    expect(userRepository.findOneBy).not.toHaveBeenCalled();
+  });
+});
+```
+
+#### 3.4 TTL 策略
 
 项目使用统一的TTL配置管理系统，支持不同业务场景的缓存时间需求：
 

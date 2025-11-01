@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Image } from '../entities/image.entity';
 import { File } from '../entities/file.entity';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class ImageRepository {
   private readonly logger = new Logger(ImageRepository.name);
   private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.MEDIUM_CACHE); // 30分钟缓存
+  private readonly NULL_CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE); // 5分钟缓存空值
 
   constructor(
     @InjectRepository(Image)
@@ -19,7 +20,7 @@ export class ImageRepository {
   ) {}
 
   /**
-   * 根据ID查找图片（带缓存，包含文件关联）
+   * 根据ID查找图片（带缓存，包含文件关联，支持缓存穿透防护）
    */
   async findById(id: string): Promise<Image | null> {
     try {
@@ -27,7 +28,12 @@ export class ImageRepository {
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
-      if (cachedImage) {
+      if (cachedImage !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedImage)) {
+          this.logger.debug(`从缓存获取图片空值标记（缓存穿透防护）: ${id}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取图片: ${id}`);
         return cachedImage;
       }
@@ -39,9 +45,15 @@ export class ImageRepository {
         relations: ['file'],
       });
 
-      // 缓存结果（30分钟）
+      // 缓存结果（无论是否存在都缓存）
       if (image) {
         await this.cacheService.set(cacheKey, image, this.CACHE_TTL);
+        this.logger.debug(`缓存图片数据: ${id}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透
+        const nullMarker = TTLUtils.toCacheableNullValue<Image>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存图片空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return image;
@@ -52,7 +64,7 @@ export class ImageRepository {
   }
 
   /**
-   * 根据ID和用户ID查找图片（带缓存，包含文件关联）
+   * 根据ID和用户ID查找图片（带缓存，包含文件关联，支持缓存穿透防护）
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
     try {
@@ -60,7 +72,12 @@ export class ImageRepository {
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
-      if (cachedImage) {
+      if (cachedImage !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedImage)) {
+          this.logger.debug(`从缓存获取用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取用户图片: userId=${userId}, imageId=${id}`);
         return cachedImage;
       }
@@ -72,9 +89,15 @@ export class ImageRepository {
         relations: ['file'],
       });
 
-      // 缓存结果（30分钟）
+      // 缓存结果（无论是否存在都缓存）
       if (image) {
         await this.cacheService.set(cacheKey, image, this.CACHE_TTL);
+        this.logger.debug(`缓存用户图片数据: userId=${userId}, imageId=${id}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透
+        const nullMarker = TTLUtils.toCacheableNullValue<Image>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return image;

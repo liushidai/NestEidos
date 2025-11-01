@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Album } from '../entities/album.entity';
 import { AlbumRepository } from './album.repository';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils } from '../../../cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 describe('AlbumRepository', () => {
   let repository: AlbumRepository;
@@ -70,7 +70,7 @@ describe('AlbumRepository', () => {
     });
 
     it('应该从数据库获取相册并缓存', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
 
       const result = await repository.findById('123456789');
@@ -86,13 +86,17 @@ describe('AlbumRepository', () => {
     });
 
     it('当相册不存在时应该返回null', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(null);
 
       const result = await repository.findById('nonexistent');
 
       expect(result).toBeNull();
-      expect(cacheService.set).not.toHaveBeenCalled();
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:album:id:nonexistent',
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+      );
     });
   });
 
@@ -108,7 +112,7 @@ describe('AlbumRepository', () => {
     });
 
     it('应该从数据库获取用户相册并缓存', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
 
       const result = await repository.findByIdAndUserId('123456789', 'user123');
@@ -254,6 +258,75 @@ describe('AlbumRepository', () => {
       const result = await repository.isAlbumBelongsToUser('123456789', 'otheruser');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('缓存穿透防护', () => {
+    it('应该缓存空值防止缓存穿透', async () => {
+      const cacheKey = 'repo:album:id:nonexistent';
+
+      // 第一次查询 - 缓存未命中，数据库返回null
+      jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(null);
+      mockCacheService.get.mockResolvedValue(undefined);
+
+      let result1 = await repository.findById('nonexistent');
+      expect(result1).toBeNull();
+
+      // 验证数据库被调用
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: 'nonexistent' });
+
+      // 验证空值被缓存
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        cacheKey,
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+      );
+
+      // 第二次查询 - 从缓存获取空值标记
+      jest.spyOn(albumRepository, 'findOneBy').mockClear();
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      let result2 = await repository.findById('nonexistent');
+      expect(result2).toBeNull();
+
+      // 验证数据库不再被调用
+      expect(albumRepository.findOneBy).not.toHaveBeenCalled();
+    });
+
+    it('应该正确识别和返回缓存的空值', async () => {
+      const cacheKey = 'repo:album:id:nonexistent';
+
+      // 模拟缓存中存储了空值标记
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      const result = await repository.findById('nonexistent');
+
+      expect(result).toBeNull();
+      expect(mockCacheService.get).toHaveBeenCalledWith(cacheKey);
+      expect(albumRepository.findOneBy).not.toHaveBeenCalled();
+    });
+
+    it('应该在更新时清理空值缓存', async () => {
+      const cacheKey = 'repo:album:id:nonexistent';
+      const updateData = { albumName: '新名称' };
+
+      // 先缓存空值
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      // 尝试更新不存在的相册
+      await expect(repository.update('nonexistent', 'user123', updateData))
+        .rejects.toThrow('相册不存在或无权限操作');
+    });
+
+    it('应该在删除时清理空值缓存', async () => {
+      const cacheKey = 'repo:album:id:nonexistent';
+
+      // 先缓存空值
+      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+
+      // 尝试删除不存在的相册
+      await expect(repository.delete('nonexistent', 'user123'))
+        .rejects.toThrow('相册不存在或无权限操作');
     });
   });
 });

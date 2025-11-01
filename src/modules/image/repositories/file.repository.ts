@@ -2,12 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { File } from '../entities/file.entity';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '@/cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class FileRepository {
   private readonly logger = new Logger(FileRepository.name);
   private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE); // 2小时缓存
+  private readonly NULL_CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE); // 5分钟缓存空值
 
   constructor(
     @InjectRepository(File)
@@ -16,7 +17,7 @@ export class FileRepository {
   ) {}
 
   /**
-   * 根据ID查找文件（带缓存）
+   * 根据ID查找文件（带缓存，支持缓存穿透防护）
    */
   async findById(id: string): Promise<File | null> {
     try {
@@ -24,7 +25,12 @@ export class FileRepository {
 
       // 尝试从缓存获取
       const cachedFile = await this.cacheService.get<File>(cacheKey);
-      if (cachedFile) {
+      if (cachedFile !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedFile)) {
+          this.logger.debug(`从缓存获取文件空值标记（缓存穿透防护）: ${id}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取文件: ${id}`);
         return cachedFile;
       }
@@ -33,9 +39,15 @@ export class FileRepository {
       this.logger.debug(`从数据库获取文件: ${id}`);
       const file = await this.fileRepository.findOneBy({ id });
 
-      // 缓存结果（2小时）
+      // 缓存结果（无论是否存在都缓存）
       if (file) {
         await this.cacheService.set(cacheKey, file, this.CACHE_TTL);
+        this.logger.debug(`缓存文件数据: ${id}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透
+        const nullMarker = TTLUtils.toCacheableNullValue<File>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存文件空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return file;
@@ -46,7 +58,7 @@ export class FileRepository {
   }
 
   /**
-   * 根据哈希值查找文件（带缓存，用于去重）
+   * 根据哈希值查找文件（带缓存，用于去重，支持缓存穿透防护）
    */
   async findByHash(hash: string): Promise<File | null> {
     try {
@@ -54,7 +66,12 @@ export class FileRepository {
 
       // 尝试从缓存获取
       const cachedFile = await this.cacheService.get<File>(cacheKey);
-      if (cachedFile) {
+      if (cachedFile !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedFile)) {
+          this.logger.debug(`从缓存获取文件哈希空值标记（缓存穿透防护）: ${hash}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取文件（哈希）: ${hash}`);
         return cachedFile;
       }
@@ -63,9 +80,15 @@ export class FileRepository {
       this.logger.debug(`从数据库获取文件（哈希）: ${hash}`);
       const file = await this.fileRepository.findOneBy({ hash });
 
-      // 缓存结果（2小时）
+      // 缓存结果（无论是否存在都缓存）
       if (file) {
         await this.cacheService.set(cacheKey, file, this.CACHE_TTL);
+        this.logger.debug(`缓存文件哈希数据: ${hash}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透和重复的文件不存在查询
+        const nullMarker = TTLUtils.toCacheableNullValue<File>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存文件哈希空值标记（缓存穿透防护）: ${hash}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return file;

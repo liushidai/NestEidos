@@ -28,6 +28,8 @@ export interface CacheTTLConfigs {
   AUTH_TOKEN: TTLConfig;
   /** 默认缓存 - 4小时 */
   DEFAULT_CACHE: TTLConfig;
+  /** 缓存穿透防护 - 短期缓存空值，5分钟 */
+  NULL_CACHE: TTLConfig;
 }
 
 /**
@@ -41,6 +43,16 @@ export const CACHE_KEYS = {
 };
 
 /**
+ * 缓存穿透防护常量
+ */
+export const NULL_CACHE_VALUES = {
+  /** 表示缓存空值的特殊标记 */
+  NULL_PLACEHOLDER: '__NULL_CACHE_PLACEHOLDER__',
+  /** 表示缓存空值的特殊标记（用于数字类型） */
+  NULL_NUMBER_PLACEHOLDER: -999999999,
+} as const;
+
+/**
  * TTL配置常量
  */
 export const TTL_CONFIGS: CacheTTLConfigs = {
@@ -48,6 +60,7 @@ export const TTL_CONFIGS: CacheTTLConfigs = {
   SHORT_CACHE: { value: 5, unit: TTLUnit.MINUTES },
   MEDIUM_CACHE: { value: 30, unit: TTLUnit.MINUTES },
   LONG_CACHE: { value: 2, unit: TTLUnit.HOURS },
+  NULL_CACHE: { value: 5, unit: TTLUnit.MINUTES },
   AUTH_TOKEN: { value: 30, unit: TTLUnit.DAYS }, // 默认30天，可通过配置覆盖
   DEFAULT_CACHE: { value: 4, unit: TTLUnit.HOURS },
 };
@@ -130,6 +143,51 @@ export class TTLUtils {
     };
 
     return `${config.value} ${unitNames[config.unit]}`;
+  }
+
+  /**
+   * 检查值是否为缓存的空值标记
+   */
+  static isNullCacheValue<T>(value: T): boolean {
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    // 检查字符串类型的空值标记
+    if (typeof value === 'string' && value === NULL_CACHE_VALUES.NULL_PLACEHOLDER) {
+      return true;
+    }
+
+    // 检查数字类型的空值标记
+    if (typeof value === 'number' && value === NULL_CACHE_VALUES.NULL_NUMBER_PLACEHOLDER) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 将 null 值转换为可缓存的标记值
+   */
+  static toCacheableNullValue<T>(): T {
+    // 这里可以根据类型返回不同的标记值
+    // 为了简化，统一返回字符串标记
+    return NULL_CACHE_VALUES.NULL_PLACEHOLDER as unknown as T;
+  }
+
+  /**
+   * 检查缓存值是否表示 null，并返回真实的 null 值
+   */
+  static fromCachedValue<T>(cachedValue: T): T | null {
+    if (cachedValue === null || cachedValue === undefined) {
+      return null;
+    }
+
+    if (TTLUtils.isNullCacheValue(cachedValue)) {
+      return null;
+    }
+
+    return cachedValue;
   }
 }
 

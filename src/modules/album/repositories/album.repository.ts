@@ -2,12 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 import { Album } from '../entities/album.entity';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class AlbumRepository {
   private readonly logger = new Logger(AlbumRepository.name);
   private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE); // 2小时缓存
+  private readonly NULL_CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE); // 5分钟缓存空值
 
   constructor(
     @InjectRepository(Album)
@@ -16,7 +17,7 @@ export class AlbumRepository {
   ) {}
 
   /**
-   * 根据ID查找相册（带缓存）
+   * 根据ID查找相册（带缓存，支持缓存穿透防护）
    */
   async findById(id: string): Promise<Album | null> {
     try {
@@ -24,7 +25,12 @@ export class AlbumRepository {
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
-      if (cachedAlbum) {
+      if (cachedAlbum !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedAlbum)) {
+          this.logger.debug(`从缓存获取空值标记（缓存穿透防护）: ${id}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取相册: ${id}`);
         return cachedAlbum;
       }
@@ -33,9 +39,15 @@ export class AlbumRepository {
       this.logger.debug(`从数据库获取相册: ${id}`);
       const album = await this.albumRepository.findOneBy({ id });
 
-      // 缓存结果（2小时）
+      // 缓存结果（无论是否存在都缓存）
       if (album) {
         await this.cacheService.set(cacheKey, album, this.CACHE_TTL);
+        this.logger.debug(`缓存相册数据: ${id}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透
+        const nullMarker = TTLUtils.toCacheableNullValue<Album>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return album;
@@ -46,7 +58,7 @@ export class AlbumRepository {
   }
 
   /**
-   * 根据用户ID和相册ID查找相册（确保是用户自己的相册，带缓存）
+   * 根据用户ID和相册ID查找相册（确保是用户自己的相册，带缓存穿透防护）
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Album | null> {
     try {
@@ -54,7 +66,12 @@ export class AlbumRepository {
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
-      if (cachedAlbum) {
+      if (cachedAlbum !== undefined) {
+        // 检查是否为缓存的空值标记
+        if (TTLUtils.isNullCacheValue(cachedAlbum)) {
+          this.logger.debug(`从缓存获取用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}`);
+          return null;
+        }
         this.logger.debug(`从缓存获取用户相册: userId=${userId}, albumId=${id}`);
         return cachedAlbum;
       }
@@ -63,9 +80,15 @@ export class AlbumRepository {
       this.logger.debug(`从数据库获取用户相册: userId=${userId}, albumId=${id}`);
       const album = await this.albumRepository.findOneBy({ id, userId });
 
-      // 缓存结果（2小时）
+      // 缓存结果（无论是否存在都缓存）
       if (album) {
         await this.cacheService.set(cacheKey, album, this.CACHE_TTL);
+        this.logger.debug(`缓存用户相册数据: userId=${userId}, albumId=${id}, TTL: ${this.CACHE_TTL}秒`);
+      } else {
+        // 缓存空值，防止缓存穿透
+        const nullMarker = TTLUtils.toCacheableNullValue<Album>();
+        await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
+        this.logger.debug(`缓存用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
       }
 
       return album;

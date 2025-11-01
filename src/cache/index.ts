@@ -4,7 +4,7 @@ export { CacheModule } from './core/cache.module';
 export { CacheService } from './core/cache.service';
 
 // 配置
-export { TTL_CONFIGS, TTLUtils, CacheKeyUtils, TTLUnit } from './config/ttl.config';
+export { TTL_CONFIGS, TTLUtils, CacheKeyUtils, TTLUnit, NULL_CACHE_VALUES } from './config/ttl.config';
 
 // 监控
 export { CacheMonitorService } from './monitoring/cache-monitor.service';
