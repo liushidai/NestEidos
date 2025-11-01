@@ -13,7 +13,7 @@ import { TempFileService } from '../../services/temp-file.service';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as sharp from 'sharp';
-import { ImageMimeType, getFileExtension } from '../../constants/mime-type.constant';
+import { getImageFormatByMimeType } from '../../common/constants/image-formats';
 
 @Injectable()
 export class ImageService {
@@ -295,7 +295,7 @@ export class ImageService {
   private generateStoragePaths(imageId: string, format?: string): { original: string; webp: string; avif: string } {
     const encodedId = this.secureIdUtil.encode(BigInt(imageId));
 
-    const extension = format ? getFileExtension(format as ImageMimeType) : 'jpg';
+    const extension = format ? getImageFormatByMimeType(format)?.extensions[0] || 'jpg' : 'jpg';
 
     return {
       original: `images/${encodedId}-o.${extension}`,

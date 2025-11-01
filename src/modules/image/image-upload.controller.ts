@@ -8,8 +8,9 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ImageService } from './image.service';
 import { Image } from './entities/image.entity';
@@ -17,6 +18,7 @@ import { CreateImageDto } from './dto/create-image.dto';
 import { UploadImageDto } from './dto/upload-image.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
 import { FileValidationPipe } from '../../pipes/file-validation.pipe';
+import { ImageUploadInterceptor } from '../../common/interceptors/image-upload.interceptor';
 import { Request as ExpressRequest } from 'express';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -28,11 +30,14 @@ interface AuthenticatedRequest extends ExpressRequest {
 @UseGuards(TokenGuard)
 @ApiBearerAuth('token')
 export class ImageUploadController {
-  constructor(private readonly imageService: ImageService) {}
+  constructor(
+    private readonly imageService: ImageService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(ImageUploadInterceptor)
   @ApiOperation({ summary: '上传图片' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -80,14 +85,15 @@ export class ImageUploadController {
     description: '认证令牌无效或已过期',
   })
   async uploadImage(
-    @UploadedFile(FileValidationPipe.createImagePipe(100 * 1024 * 1024)) // 100MB
+    @UploadedFile(FileValidationPipe.createImagePipe()) // 文件验证已在 fileFilter 中完成
     file: Express.Multer.File,
     @Body() createImageDto: CreateImageDto,
     @Request() req: AuthenticatedRequest,
   ): Promise<Image> {
     const userId = req.user.userId;
 
-    // 完整的图片处理逻辑已在服务层实现
+    // fileFilter 已确保文件合法，无需重复验证
+    // 直接进行业务处理：完整的图片处理逻辑已在服务层实现
     const result = await this.imageService.create(createImageDto, userId, file);
 
     return result;
