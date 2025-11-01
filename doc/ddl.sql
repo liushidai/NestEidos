@@ -52,41 +52,10 @@ COMMENT ON COLUMN album.updated_at IS '更新时间，由程序在每次更新�
 --  file 表（存储文件内容元数据，用于去重）
 CREATE TABLE file (
     id BIGINT PRIMARY KEY,
-    hash CHAR(64) NOT NULL UNIQUE,
-    file_size BIGINT NOT NULL CHECK (file_size >= 0),
-    mime_type VARCHAR(64) NOT NULL,
-    width INTEGER NOT NULL CHECK (width > 0),
-    height INTEGER NOT NULL CHECK (height > 0),
-    original_key VARCHAR(512) NOT NULL,
-    webp_key VARCHAR(512),
-    avif_key VARCHAR(512),
-    has_webp BOOLEAN NOT NULL DEFAULT false,
-    has_avif BOOLEAN NOT NULL DEFAULT false,
-    convert_webp_param_id BIGINT,
-    convert_avif_param_id BIGINT,
+
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- 表注释
-COMMENT ON TABLE file IS '文件内容元数据表，用于基于 hash 去重（支持图片等二进制文件）';
-
--- 字段注释
-COMMENT ON COLUMN file.id IS '文件记录ID，雪花算法生成';
-COMMENT ON COLUMN file.hash IS '文件内容的 SHA256 哈希值（64位小写十六进制），用于内容去重';
-COMMENT ON COLUMN file.file_size IS '原始文件大小，单位：字节';
-COMMENT ON COLUMN file.mime_type IS '原始 MIME 类型，如 image/jpeg、image/png';
-COMMENT ON COLUMN file.width IS '原始图片宽度，单位：像素（仅适用于图片）';
-COMMENT ON COLUMN file.height IS '原始图片高度，单位：像素（仅适用于图片）';
-COMMENT ON COLUMN file.original_key IS '原始文件在对象存储中的路径或键（key）';
-COMMENT ON COLUMN file.webp_key IS 'WebP 格式文件在对象存储中的路径，若未生成则为 NULL';
-COMMENT ON COLUMN file.avif_key IS 'AVIF 格式文件在对象存储中的路径，若未生成则为 NULL';
-COMMENT ON COLUMN file.has_webp IS '是否已成功生成 WebP 格式';
-COMMENT ON COLUMN file.has_avif IS '是否已成功生成 AVIF 格式';
-COMMENT ON COLUMN file.convert_webp_param_id IS '生成 WebP 时使用的转换参数配置ID，关联转换参数表';
-COMMENT ON COLUMN file.convert_avif_param_id IS '生成 AVIF 时使用的转换参数配置ID，关联转换参数表';
-COMMENT ON COLUMN file.created_at IS '该文件元数据首次插入时间';
--- 为 file.hash 创建唯一索引，确保去重
-CREATE UNIQUE INDEX IF NOT EXISTS idx_file_hash ON file(hash);
 
 -- image 表（业务层图片实例）
 CREATE TABLE image (
@@ -95,9 +64,31 @@ CREATE TABLE image (
     album_id BIGINT NOT NULL DEFAULT 0,
     original_name VARCHAR(255) NOT NULL,
     title VARCHAR(255),
-    file_id BIGINT NOT NULL,
+    image_hash CHAR(64) NOT NULL,
+    image_size BIGINT NOT NULL CHECK (image_size >= 0),
+    image_mime_type VARCHAR(64) NOT NULL,
+    image_width INTEGER NOT NULL CHECK (image_width > 0),
+    image_height INTEGER NOT NULL CHECK (image_height > 0),
+    original_key VARCHAR(512) NOT NULL,
+    jpeg_key VARCHAR(512),
+    webp_key VARCHAR(512),
+    avif_key VARCHAR(512),
+    has_jpeg BOOLEAN NOT NULL DEFAULT false,
+    has_webp BOOLEAN NOT NULL DEFAULT false,
+    has_avif BOOLEAN NOT NULL DEFAULT false,
+    convert_jpeg_param_id BIGINT,
+    convert_webp_param_id BIGINT,
+    convert_avif_param_id BIGINT,
+    default_format VARCHAR(20) NOT NULL DEFAULT 'avif',
+    expire_policy SMALLINT NOT NULL,
+    expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT '9999-12-31 23:59:59'::timestamp,
+    nsfw_score REAL CHECK (nsfw_score >= 0.0 AND nsfw_score <= 1.0),
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+      -- 约束：default_format 只能是预定义的三种值
+    CONSTRAINT chk_image_default_format CHECK (default_format IN ('original', 'webp', 'avif')),
+        -- 约束：expire_policy 只能是 1, 2, 3
+    CONSTRAINT chk_image_expire_policy CHECK (expire_policy IN (1, 2, 3))
 );
 
 -- 表注释
@@ -109,6 +100,38 @@ COMMENT ON COLUMN image.user_id IS '所属用户ID，关联 user.id';
 COMMENT ON COLUMN image.album_id IS '所属相册ID；若未归属任何相册，则为0';
 COMMENT ON COLUMN image.original_name IS '原始文件名（含扩展名），如 photo.jpg';
 COMMENT ON COLUMN image.title IS '图片标题，用户可自定义，可为空';
-COMMENT ON COLUMN image.file_id IS '关联的文件记录ID（由代码层维护与 file 表的关联关系）';
+COMMENT ON COLUMN image.image_hash IS '文件内容的 SHA256 哈希值 暂时不参与业务逻辑 不用于去重';
+COMMENT ON COLUMN image.image_size IS '原始文件大小，单位：字节';
+COMMENT ON COLUMN image.image_mime_type IS '原始 MIME 类型，如 image/jpeg、image/png';
+COMMENT ON COLUMN image.image_width IS '原始图片宽度，单位：像素（仅适用于图片）';
+COMMENT ON COLUMN image.image_height IS '原始图片高度，单位：像素（仅适用于图片）';
+COMMENT ON COLUMN image.original_key IS '原始文件在对象存储中的路径或键（key） 存储路径：originals/{url}';
+COMMENT ON COLUMN image.jpeg_key IS 'JPEG 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.jpg';
+COMMENT ON COLUMN image.webp_key IS 'WebP 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.webp';
+COMMENT ON COLUMN image.avif_key IS 'AVIF 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.avif';
+COMMENT ON COLUMN image.has_jpeg IS '是否已成功生成 JPEG 格式';
+COMMENT ON COLUMN image.has_webp IS '是否已成功生成 WebP 格式';
+COMMENT ON COLUMN image.has_avif IS '是否已成功生成 AVIF 格式';
+COMMENT ON COLUMN image.convert_jpeg_param_id IS '生成 JPEG 时使用的转换参数配置ID，关联转换参数表';
+COMMENT ON COLUMN image.convert_webp_param_id IS '生成 WebP 时使用的转换参数配置ID，关联转换参数表';
+COMMENT ON COLUMN image.convert_avif_param_id IS '生成 AVIF 时使用的转换参数配置ID，关联转换参数表';
+COMMENT ON COLUMN image.default_format IS '图片通过 /i/{url} 路径返回时使用的默认格式。取值：
+- ''original'': 返回用户上传的原始文件（不做格式转换）
+- ''webp'': 返回系统生成的 WebP 格式（推荐默认）
+- ''avif'': 返回系统生成的 AVIF 格式
+该值在图片处理完成后由系统确定，后期不再变更。';
+COMMENT ON COLUMN image.expire_policy IS '图片过期策略：
+1 = 永久保存（不过期），
+2 = 限时访问但过期后保留文件（如仅隐藏），
+3 = 限时访问且过期后自动删除文件。
+系统根据此策略决定是否清理存储或拒绝访问。';
+COMMENT ON COLUMN image.expires_at IS '图片过期时间。
+- 当 expire_policy = 1（永久）时，设为 9999-12-31（表示永不过期）；
+- 当 expire_policy = 2 或 3 时，为具体的过期时间（UTC 或业务时区）。
+应用层应定期扫描 expires_at < NOW() 的记录进行处理。';
+COMMENT ON COLUMN image.nsfw_score IS '图片 NSFW 分数（0.0 到 1.0），用于判断图片是否为 NSFW 内容。
+- 分数越高，图片越可能为 NSFW 内容。
+- 分数为 0.0 表示图片为 SFW（安全内容），分数为 1.0 表示图片为 NSFW（非安全内容）。
+- 该值在图片处理完成后由系统确定，后期不再变更。';
 COMMENT ON COLUMN image.created_at IS '创建时间，由程序插入时提供';
 COMMENT ON COLUMN image.updated_at IS '更新时间，由程序在每次更新时提供';

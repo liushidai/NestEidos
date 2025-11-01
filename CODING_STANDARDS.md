@@ -119,24 +119,34 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 ### 1. 实体定义
 
-**原则：** 使用雪花算法生成 ID，自动管理时间戳。
+**原则：** 使用雪花算法生成 ID，自动管理时间戳，避免不必要的表关联。
 
 ```typescript
 @Entity('users')
 export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string; // 使用雪花算法生成的 UUID
+  @PrimaryColumn('bigint')
+  id: string; // 使用雪花算法生成的 ID
 
-  @Column()
-  name: string;
+  @Column({ name: 'user_name', type: 'varchar', length: 255, unique: true })
+  userName: string;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date; // 自动设置创建时间
+  @Column({ name: 'pass_word', type: 'varchar', length: 255 })
+  passWord: string;
 
-  @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date; // 自动更新修改时间
+  @Column({ name: 'created_at', type: 'timestamp without time zone' })
+  createdAt: Date; // 由程序在插入时设置
+
+  @Column({ name: 'updated_at', type: 'timestamp without time zone' })
+  updatedAt: Date; // 由程序在每次更新时设置
 }
 ```
+
+**设计原则：**
+
+1. **避免过度规范化**：对于图床系统，将文件元数据和图片业务信息合并在同一张表中，减少 JOIN 查询
+2. **统一存储路径**：使用标准的路径结构（originals/ 和 processed/）组织文件存储
+3. **简化关联关系**：避免不必要的多表关联，通过合理的字段设计提高查询效率
+4. **程序管理时间戳**：不依赖数据库自动时间戳，确保时间控制的准确性
 
 ### 2. 数据库配置
 

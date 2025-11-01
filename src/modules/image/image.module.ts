@@ -2,10 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { Image } from './entities/image.entity';
-import { File } from './entities/file.entity';
 import { ImageService } from './image.service';
 import { ImageRepository } from './repositories/image.repository';
-import { FileRepository } from './repositories/file.repository';
 import { ProtectedImageController } from './protected-image.controller';
 import { ImageUploadController } from './image-upload.controller';
 import { AuthModule } from '../auth/auth.module';
@@ -16,7 +14,7 @@ import { CacheModule } from '@/cache';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Image, File]),
+    TypeOrmModule.forFeature([Image]),
     AuthModule,
     ConfigModule,
     CacheModule,
@@ -25,11 +23,10 @@ import { CacheModule } from '@/cache';
   providers: [
     ImageService,
     ImageRepository,
-    FileRepository,
     StorageService,
     TempFileService,
     SecureIdUtil,
   ],
-  exports: [ImageService, ImageRepository, FileRepository],
+  exports: [ImageService, ImageRepository],
 })
 export class ImageModule {}

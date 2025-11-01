@@ -2,14 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
-import { File } from '../entities/file.entity';
 import { ImageRepository } from './image.repository';
 import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 describe('ImageRepository', () => {
   let repository: ImageRepository;
   let imageRepository: Repository<Image>;
-  let fileRepository: Repository<File>;
   let cacheService: SimpleCacheService;
 
   const mockImage: Image = {
@@ -18,29 +16,27 @@ describe('ImageRepository', () => {
     albumId: 'album123',
     title: '测试图片',
     originalName: 'test.jpg',
-    fileId: 'file123',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    generateId: jest.fn(),
-    setCreatedAt: jest.fn(),
-    setUpdatedAt: jest.fn(),
-  } as any;
-
-  const mockFile: File = {
-    id: 'file123',
-    hash: 'abc123',
-    fileSize: 1024,
-    mimeType: 'image/jpeg',
-    width: 800,
-    height: 600,
-    originalKey: 'images/test.jpg',
-    webpKey: 'images/test.webp',
-    avifKey: 'images/test.avif',
+    imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+    imageSize: 1024000,
+    imageMimeType: 'image/jpeg',
+    imageWidth: 1920,
+    imageHeight: 1080,
+    originalKey: 'originals/test.jpg',
+    jpegKey: 'processed/test.jpg',
+    webpKey: 'processed/test.webp',
+    avifKey: 'processed/test.avif',
+    hasJpeg: true,
     hasWebp: true,
     hasAvif: true,
+    convertJpegParamId: null,
     convertWebpParamId: null,
     convertAvifParamId: null,
+    defaultFormat: 'avif',
+    expirePolicy: 1,
+    expiresAt: new Date('9999-12-31T23:59:59Z'),
+    nsfwScore: null,
     createdAt: new Date(),
+    updatedAt: new Date(),
   } as any;
 
   const mockCacheService = {
@@ -66,13 +62,6 @@ describe('ImageRepository', () => {
           },
         },
         {
-          provide: getRepositoryToken(File),
-          useValue: {
-            findOneBy: jest.fn(),
-            remove: jest.fn(),
-          },
-        },
-        {
           provide: SimpleCacheService,
           useValue: mockCacheService,
         },
@@ -81,7 +70,6 @@ describe('ImageRepository', () => {
 
     repository = module.get<ImageRepository>(ImageRepository);
     imageRepository = module.get<Repository<Image>>(getRepositoryToken(Image));
-    fileRepository = module.get<Repository<File>>(getRepositoryToken(File));
     cacheService = module.get<SimpleCacheService>(SimpleCacheService);
   });
 

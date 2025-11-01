@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Image } from '../entities/image.entity';
-import { File } from '../entities/file.entity';
 import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
@@ -14,13 +13,11 @@ export class ImageRepository {
   constructor(
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
-    @InjectRepository(File)
-    private readonly fileRepository: Repository<File>,
     private readonly cacheService: SimpleCacheService,
   ) {}
 
   /**
-   * 根据ID查找图片（带缓存，包含文件关联，支持缓存穿透防护）
+   * 根据ID查找图片（带缓存，支持缓存穿透防护）
    */
   async findById(id: string): Promise<Image | null> {
     try {
@@ -42,7 +39,7 @@ export class ImageRepository {
       this.logger.debug(`从数据库获取图片: ${id}`);
       const image = await this.imageRepository.findOne({
         where: { id },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
 
       // 缓存结果（无论是否存在都缓存）
@@ -64,7 +61,7 @@ export class ImageRepository {
   }
 
   /**
-   * 根据ID和用户ID查找图片（带缓存，包含文件关联，支持缓存穿透防护）
+   * 根据ID和用户ID查找图片（带缓存，支持缓存穿透防护）
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
     try {
@@ -86,7 +83,7 @@ export class ImageRepository {
       this.logger.debug(`从数据库获取用户图片: userId=${userId}, imageId=${id}`);
       const image = await this.imageRepository.findOne({
         where: { id, userId },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
 
       // 缓存结果（无论是否存在都缓存）
@@ -123,7 +120,8 @@ export class ImageRepository {
       // 构建查询条件
       const queryBuilder = this.imageRepository
         .createQueryBuilder('image')
-        .leftJoinAndSelect('image.file', 'file')
+        .leftJoinAndSelect('image.user', 'user')
+        .leftJoinAndSelect('image.album', 'album')
         .where('image.userId = :userId', { userId })
         .skip(skip)
         .take(limit)
@@ -139,7 +137,7 @@ export class ImageRepository {
       }
 
       if (mimeType && mimeType.length > 0) {
-        queryBuilder.andWhere('file.mimeType IN (:...mimeType)', { mimeType });
+        queryBuilder.andWhere('image.imageMimeType IN (:...mimeType)', { mimeType });
       }
 
       // 查询总数和数据
@@ -241,20 +239,7 @@ export class ImageRepository {
     }
   }
 
-  /**
-   * 统计指定文件被引用的次数
-   */
-  async countByFileId(fileId: string): Promise<number> {
-    try {
-      return await this.imageRepository.count({
-        where: { fileId },
-      });
-    } catch (error) {
-      this.logger.error(`统计文件引用次数失败: fileId=${fileId}`, error.stack);
-      throw error;
-    }
-  }
-
+  
   /**
    * 批量更新图片的相册ID（用于相册删除时）
    */

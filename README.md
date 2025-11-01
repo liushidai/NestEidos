@@ -90,23 +90,39 @@ src/
 
 ### 数据库设计
 
-系统采用三个核心数据表：
+系统采用三个核心数据表，遵循简化设计原则，避免过度规范化：
 
 #### 用户表 (user)
 - **字段**: id, user_name, pass_word, user_type, user_status, created_at, updated_at
 - **功能**: 存储用户基本信息和认证数据
 - **用户类型**: 1-管理员, 10-普通用户
 - **用户状态**: 1-正常, 2-封锁
+- **ID生成**: 使用雪花算法生成唯一ID
 
 #### 相册表 (album)
 - **字段**: id, user_id, album_name, created_at, updated_at
 - **功能**: 管理用户的相册分类
 - **关联**: 每个相册属于一个特定用户
+- **默认相册**: album_id = 0 表示未分类
 
-#### 图片表 (image)
-- **字段**: id, user_id, album_id, original_name, title, file_size, mime_type, width, height, hash, original_key, webp_key, avif_key, has_webp, has_avif, convert_webp_param_id, convert_avif_param_id, created_at, updated_at
-- **功能**: 存储图片元数据和多格式存储信息
-- **特性**: 支持SHA256去重、WebP/AVIF格式转换、关联相册管理
+#### 图片表 (image) - 统一存储设计
+- **基础字段**: id, user_id, album_id, original_name, title, created_at, updated_at
+- **文件元数据**: image_hash, image_size, image_mime_type, image_width, image_height
+- **存储路径**: original_key, jpeg_key, webp_key, avif_key (统一表结构，无需关联文件表)
+- **格式标识**: has_jpeg, has_webp, has_avif
+- **配置字段**: default_format, expire_policy, expires_at
+- **扩展字段**: nsfw_score (预留)
+- **功能**: 存储图片所有相关信息，包括业务数据和存储信息
+- **特性**:
+  - 不再进行文件去重（image_hash 仅用于存储）
+  - 支持过期策略（永久、限时保留、限时删除）
+  - 支持默认返回格式设置（original/webp/avif）
+  - 统一存储路径结构（originals/ 和 processed/）
+
+**设计优势：**
+- **查询效率**: 避免复杂的 JOIN 查询，单表获取所有图片信息
+- **简化架构**: 移除文件表关联，降低系统复杂度
+- **功能完整**: 支持多格式存储、过期管理、NSFW检测等高级功能
 
 ### 核心功能模块
 
@@ -127,11 +143,13 @@ src/
 - 图片分类组织
 
 #### 4. 图片模块 (Image)
-- 图片上传处理
-- 多格式存储 (Original, WebP, AVIF)
-- 图片元数据提取
-- 文件去重检测
+- 图片上传处理（支持多种格式）
+- 多格式自动转换 (JPEG, WebP, AVIF)
+- 图片元数据提取和存储
+- 过期策略管理（永久/限时）
 - 图片查询和管理
+- NSFW 内容检测（预留）
+- 统一存储路径管理
 
 #### 5. 存储服务 (Storage)
 - MinIO对象存储集成

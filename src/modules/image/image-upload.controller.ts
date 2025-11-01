@@ -16,6 +16,7 @@ import { ImageService } from './image.service';
 import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UploadImageDto } from './dto/upload-image.dto';
+import { ImageResponseDto } from './dto/image-response.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
 import { FileValidationPipe } from '../../pipes/file-validation.pipe';
 import { ImageUploadInterceptor } from '../../common/interceptors/image-upload.interceptor';
@@ -41,39 +42,40 @@ export class ImageUploadController {
   @ApiOperation({ summary: '上传图片' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: '上传图片文件，可选择指定相册ID和标题',
+    description: '上传图片文件，可选择指定相册ID、标题、默认格式和过期策略',
     type: UploadImageDto,
   })
   @ApiResponse({
     status: 201,
     description: '上传成功',
-    schema: {
-      example: {
-        id: '1234567890123456789',
-        userId: '1234567890123456788',
-        albumId: '0',
-        originalName: 'test1.jpg',
-        title: '一只猫',
-        fileId: '1234567890123456790',
-        createdAt: '2024-01-01T00:00:00.000Z',
-        updatedAt: '2024-01-01T00:00:00.000Z',
-        file: {
-          id: '1234567890123456790',
-          hash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
-          fileSize: 1024000,
-          mimeType: 'image/jpeg',
-          width: 1920,
-          height: 1080,
-          originalKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-o.jpg',
-          webpKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-w.webp',
-          avifKey: 'images/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5-a.avif',
-          hasWebp: true,
-          hasAvif: true,
-          convertWebpParamId: null,
-          convertAvifParamId: null,
-          createdAt: '2024-01-01T00:00:00.000Z',
-        },
-      },
+    type: ImageResponseDto,
+    example: {
+      id: '1234567890123456789',
+      userId: '1234567890123456788',
+      albumId: '0',
+      originalName: 'test1.jpg',
+      title: '一只猫',
+      imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+      imageSize: 1024000,
+      imageMimeType: 'image/jpeg',
+      imageWidth: 1920,
+      imageHeight: 1080,
+      originalKey: 'originals/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.jpg',
+      jpegKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.jpg',
+      webpKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.webp',
+      avifKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.avif',
+      hasJpeg: true,
+      hasWebp: true,
+      hasAvif: true,
+      convertJpegParamId: null,
+      convertWebpParamId: null,
+      convertAvifParamId: null,
+      defaultFormat: 'avif',
+      expirePolicy: 1,
+      expiresAt: '9999-12-31T23:59:59Z',
+      nsfwScore: null,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
     },
   })
   @ApiResponse({
