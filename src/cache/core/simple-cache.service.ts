@@ -1,16 +1,28 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, Logger, Inject, OnModuleDestroy } from '@nestjs/common';
+import { createClient, RedisClientType } from 'redis';
 
 /**
  * 简单的缓存服务
  * 提供基本的缓存操作，避免过度抽象
  */
 @Injectable()
-export class SimpleCacheService {
+export class SimpleCacheService implements OnModuleDestroy {
   private readonly logger = new Logger(SimpleCacheService.name);
   private readonly keyPrefix = 'nest_eidos:cache:';
+  private readonly redis: RedisClientType;
 
-  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
+  constructor(@Inject('REDIS_CLIENT') redis: RedisClientType) {
+    this.redis = redis;
+  }
+
+  async onModuleDestroy() {
+    try {
+      await this.redis.quit();
+      this.logger.log('Redis 连接已关闭');
+    } catch (error) {
+      this.logger.error('关闭 Redis 连接时发生错误', error);
+    }
+  }
 
   /**
    * 获取缓存值
@@ -46,7 +58,7 @@ export class SimpleCacheService {
       const fullKey = this.keyPrefix + key;
       const serializedValue = JSON.stringify(value);
 
-      await this.redis.setex(fullKey, ttl, serializedValue);
+      await this.redis.setEx(fullKey, ttl, serializedValue);
       this.logger.debug(`设置缓存: ${key}, TTL: ${ttl}s`);
     } catch (error) {
       this.logger.error(`设置缓存失败: ${key}`, error);
@@ -77,7 +89,7 @@ export class SimpleCacheService {
       const keys = await this.redis.keys(fullPattern);
 
       if (keys.length > 0) {
-        await this.redis.del(...keys);
+        await this.redis.del(keys);
         this.logger.debug(`删除缓存模式: ${pattern}, 删除了 ${keys.length} 个键`);
       }
     } catch (error) {
@@ -94,7 +106,7 @@ export class SimpleCacheService {
       const keys = await this.redis.keys(pattern);
 
       if (keys.length > 0) {
-        await this.redis.del(...keys);
+        await this.redis.del(keys);
         this.logger.log(`清空所有缓存，删除了 ${keys.length} 个键`);
       }
     } catch (error) {
