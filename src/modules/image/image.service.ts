@@ -116,7 +116,7 @@ export class ImageService {
       throw new InternalServerErrorException('图片处理失败');
     } finally {
       // 清理临时文件
-      const tempFilesToDelete = [tempFilePath, webpPath, avifPath].filter(Boolean) as string[];
+      const tempFilesToDelete = [tempFilePath, webpPath, avifPath].filter((path) => path !== undefined && path !== null) as string[];
       if (tempFilesToDelete.length > 0) {
         await this.tempFileService.deleteTempFiles(tempFilesToDelete);
       }
@@ -408,7 +408,7 @@ export class ImageService {
       this.logger.error('上传文件到存储服务失败', error);
 
       // 回滚已上传的文件
-      const uploadedKeys = [paths.original, paths.jpeg, paths.webp, paths.avif].filter(Boolean);
+      const uploadedKeys = [paths.original, paths.jpeg, paths.webp, paths.avif].filter((key) => key !== undefined && key !== null);
       try {
         await this.storageService.deleteMany(uploadedKeys);
       } catch (rollbackError) {
