@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, In, FindOptionsWhere } from 'typeorm';
+import { Injectable, NotFoundException, InternalServerErrorException, Logger, BadRequestException } from '@nestjs/common';
 import { Image } from './entities/image.entity';
 import { File } from './entities/file.entity';
+import { ImageRepository } from './repositories/image.repository';
+import { FileRepository } from './repositories/file.repository';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { QueryImageDto } from './dto/query-image.dto';
@@ -21,10 +21,8 @@ export class ImageService {
   private readonly secureIdUtil: SecureIdUtil;
 
   constructor(
-    @InjectRepository(Image)
-    private readonly imageRepository: Repository<Image>,
-    @InjectRepository(File)
-    private readonly fileRepository: Repository<File>,
+    private readonly imageRepository: ImageRepository,
+    private readonly fileRepository: FileRepository,
     private readonly storageService: StorageService,
     private readonly tempFileService: TempFileService,
     private readonly configService: ConfigService,
@@ -43,6 +41,8 @@ export class ImageService {
     let webpPath: string | null = null;
     let avifPath: string | null = null;
 
+    this.logger.debug(`开始处理图片上传: ${fileData.originalname}, userId: ${userId}`);
+
     try {
       // 1. 保存文件到临时位置
       tempFilePath = await this.tempFileService.saveTempFile(fileData);
@@ -51,7 +51,7 @@ export class ImageService {
       const hash = await this.calculateFileHash(tempFilePath);
 
       // 3. 检查是否已存在相同哈希的文件（去重）
-      let existingFile = await this.findFileByHash(hash);
+      let existingFile = await this.fileRepository.findByHash(hash);
 
       if (!existingFile) {
         // 4. 获取图片元数据
@@ -73,7 +73,7 @@ export class ImageService {
         );
 
         // 8. 创建文件记录
-        existingFile = this.fileRepository.create({
+        existingFile = await this.fileRepository.create({
           id: fileId.toString(),
           hash,
           fileSize: fileData.size,
@@ -87,8 +87,6 @@ export class ImageService {
           hasAvif: !!uploadKeys.avif,
           createdAt: now,
         });
-
-        existingFile = await this.fileRepository.save(existingFile);
         this.logger.log(`新文件上传成功: ${fileId}, 哈希: ${hash}`);
       } else {
         this.logger.log(`发现重复文件，复用已有文件记录: ${existingFile.id}, 哈希: ${hash}`);
@@ -97,7 +95,7 @@ export class ImageService {
       }
 
       // 9. 创建图片记录
-      const image = this.imageRepository.create({
+      const image = await this.imageRepository.create({
         id: imageId,
         userId,
         albumId: createImageDto.albumId || '0',
@@ -108,10 +106,9 @@ export class ImageService {
         updatedAt: now,
       });
 
-      const savedImage = await this.imageRepository.save(image);
       this.logger.log(`图片记录创建成功: ${imageId}, 原始文件: ${fileData.originalname}`);
 
-      return savedImage;
+      return image;
 
     } catch (error) {
       this.logger.error(`图片上传失败: ${fileData.originalname}`, error);
@@ -127,158 +124,129 @@ export class ImageService {
 
   /**
    * 根据ID查找图片
+   * 委托给Repository处理，Repository层负责缓存管理
    */
   async findById(id: string): Promise<Image | null> {
-    return this.imageRepository.findOne({
-      where: { id },
-      relations: ['file'],
-    });
+    this.logger.debug(`查找图片: ${id}`);
+    return await this.imageRepository.findById(id);
   }
 
   /**
    * 根据ID和用户ID查找图片
+   * 委托给Repository处理，Repository层负责缓存管理
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
-    return this.imageRepository.findOne({
-      where: { id, userId },
-      relations: ['file'],
-    });
+    this.logger.debug(`查找用户图片: imageId=${id}, userId=${userId}`);
+    return await this.imageRepository.findByIdAndUserId(id, userId);
   }
 
   /**
    * 分页查询用户的图片
+   * 委托给Repository处理，Repository层决定是否使用缓存
    */
   async findByUserId(userId: string, queryDto: QueryImageDto) {
     const { page = 1, limit = 10, search, albumId, mimeType } = queryDto;
-    const skip = (page - 1) * limit;
 
-    // 构建查询条件
-    const where: FindOptionsWhere<Image> = { userId };
+    // 验证分页参数
+    const validatedPage = Number.parseInt(page.toString(), 10);
+    const validatedLimit = Number.parseInt(limit.toString(), 10);
 
-    // 标题搜索
-    if (search) {
-      where.title = Like(`%${search}%`);
+    if (validatedPage < 1 || validatedLimit < 1 || validatedLimit > 100) {
+      throw new BadRequestException('分页参数无效');
     }
 
-    // 相册筛选
-    if (albumId) {
-      where.albumId = albumId;
-    }
+    this.logger.debug(`分页查询用户图片: userId=${userId}, page=${validatedPage}, limit=${validatedLimit}, search=${search}, albumId=${albumId}`);
 
-    // MIME类型筛选（现在通过file关联查询）
-    const queryBuilder = this.imageRepository
-      .createQueryBuilder('image')
-      .leftJoinAndSelect('image.file', 'file')
-      .where('image.userId = :userId', { userId })
-      .skip(skip)
-      .take(limit)
-      .orderBy('image.createdAt', 'DESC');
-
-    // 添加搜索条件
-    if (search) {
-      queryBuilder.andWhere('image.title LIKE :search', { search: `%${search}%` });
-    }
-
-    if (albumId) {
-      queryBuilder.andWhere('image.albumId = :albumId', { albumId });
-    }
-
-    if (mimeType && mimeType.length > 0) {
-      queryBuilder.andWhere('file.mimeType IN (:...mimeType)', { mimeType });
-    }
-
-    // 查询总数和数据
-    const [images, total] = await queryBuilder.getManyAndCount();
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      images,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+    return await this.imageRepository.findByUserId(
+      userId,
+      validatedPage,
+      validatedLimit,
+      search,
+      albumId,
+      mimeType
+    );
   }
 
   /**
    * 更新图片信息
+   * 委托给Repository处理，Repository层负责缓存清理
    */
   async update(id: string, userId: string, updateImageDto: UpdateImageDto): Promise<Image> {
-    const image = await this.findByIdAndUserId(id, userId);
-    if (!image) {
-      throw new NotFoundException('图片不存在或无权限操作');
+    this.logger.debug(`更新图片: imageId=${id}, userId=${userId}`);
+
+    try {
+      const { updatedImage } = await this.imageRepository.update(id, userId, updateImageDto);
+      return updatedImage;
+    } catch (error) {
+      if (error.message === '图片不存在或无权限操作') {
+        throw new NotFoundException('图片不存在或无权限操作');
+      }
+      throw error;
     }
-
-    // 只允许更新title字段
-    const updatedImage = {
-      ...image,
-      ...updateImageDto,
-      updatedAt: new Date(),
-    };
-
-    return this.imageRepository.save(updatedImage);
   }
 
   /**
    * 删除图片
+   * 委托给Repository处理，Repository层负责缓存清理
    */
   async delete(id: string, userId: string): Promise<void> {
-    const image = await this.findByIdAndUserId(id, userId);
-    if (!image) {
-      throw new NotFoundException('图片不存在或无权限操作');
-    }
+    this.logger.debug(`删除图片: imageId=${id}, userId=${userId}`);
 
-    const fileId = image.fileId;
-
-    // 删除图片记录
-    await this.imageRepository.remove(image);
-
-    // 检查是否还有其他图片引用这个文件
-    const remainingImagesCount = await this.imageRepository.count({
-      where: { fileId },
-    });
-
-    if (remainingImagesCount === 0) {
-      // 没有其他图片引用，删除文件记录和物理文件
-      const file = await this.fileRepository.findOneBy({ id: fileId });
-      if (file) {
-        // 删除对象存储中的文件
-        const keysToDelete = [file.originalKey];
-        if (file.webpKey) keysToDelete.push(file.webpKey);
-        if (file.avifKey) keysToDelete.push(file.avifKey);
-
-        try {
-          await this.storageService.deleteMany(keysToDelete);
-          this.logger.log(`删除物理文件成功: ${keysToDelete.join(', ')}`);
-        } catch (error) {
-          this.logger.error(`删除物理文件失败: ${keysToDelete.join(', ')}`, error);
-        }
-
-        // 删除文件记录
-        await this.fileRepository.remove(file);
-        this.logger.log(`删除文件记录成功: ${fileId}`);
+    try {
+      const image = await this.imageRepository.findByIdAndUserId(id, userId);
+      if (!image) {
+        throw new NotFoundException('图片不存在或无权限操作');
       }
-    } else {
-      this.logger.log(`文件仍被其他图片引用，仅删除图片记录: imageId=${id}, fileId=${fileId}`);
+
+      const fileId = image.fileId;
+
+      // 删除图片记录
+      await this.imageRepository.delete(id, userId);
+
+      // 检查是否还有其他图片引用这个文件
+      const remainingImagesCount = await this.imageRepository.countByFileId(fileId);
+
+      if (remainingImagesCount === 0) {
+        // 没有其他图片引用，删除文件记录和物理文件
+        const file = await this.fileRepository.findById(fileId);
+        if (file) {
+          // 删除对象存储中的文件
+          const keysToDelete = [file.originalKey];
+          if (file.webpKey) keysToDelete.push(file.webpKey);
+          if (file.avifKey) keysToDelete.push(file.avifKey);
+
+          try {
+            await this.storageService.deleteMany(keysToDelete);
+            this.logger.log(`删除物理文件成功: ${keysToDelete.join(', ')}`);
+          } catch (error) {
+            this.logger.error(`删除物理文件失败: ${keysToDelete.join(', ')}`, error);
+          }
+
+          // 删除文件记录
+          await this.fileRepository.delete(fileId);
+          this.logger.log(`删除文件记录成功: ${fileId}`);
+        }
+      } else {
+        this.logger.log(`文件仍被其他图片引用，仅删除图片记录: imageId=${id}, fileId=${fileId}`);
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      if (error.message === '图片不存在或无权限操作') {
+        throw new NotFoundException('图片不存在或无权限操作');
+      }
+      throw error;
     }
   }
 
   /**
    * 检查图片是否属于用户
+   * 委托给Repository处理，Repository层负责实时查询
    */
   async isImageBelongsToUser(imageId: string, userId: string): Promise<boolean> {
-    const image = await this.imageRepository.findOneBy({
-      id: imageId,
-      userId,
-    });
-    return !!image;
-  }
-
-  /**
-   * 根据哈希值查找文件（用于去重）
-   */
-  async findFileByHash(hash: string): Promise<File | null> {
-    return this.fileRepository.findOneBy({ hash });
+    this.logger.debug(`检查图片归属: imageId=${imageId}, userId=${userId}`);
+    return await this.imageRepository.isImageBelongsToUser(imageId, userId);
   }
 
   /**

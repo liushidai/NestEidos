@@ -1,46 +1,51 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, FindOptionsWhere } from 'typeorm';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Album } from './entities/album.entity';
+import { AlbumRepository } from './repositories/album.repository';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { QueryAlbumDto } from './dto/query-album.dto';
 
 @Injectable()
 export class AlbumService {
+  private readonly logger = new Logger(AlbumService.name);
+
   constructor(
-    @InjectRepository(Album)
-    private albumRepository: Repository<Album>,
+    private readonly albumRepository: AlbumRepository,
   ) {}
 
   /**
    * 创建相册
    */
   async create(createAlbumDto: CreateAlbumDto, userId: string): Promise<Album> {
-    const album = this.albumRepository.create({
+    this.logger.debug(`创建相册: ${createAlbumDto.albumName}, userId: ${userId}`);
+
+    return await this.albumRepository.create({
       ...createAlbumDto,
       userId,
     });
-
-    return this.albumRepository.save(album);
   }
 
   /**
    * 根据ID查找相册
+   * 委托给Repository处理，Repository层负责缓存管理
    */
   async findById(id: string): Promise<Album | null> {
-    return this.albumRepository.findOneBy({ id });
+    this.logger.debug(`查找相册: ${id}`);
+    return await this.albumRepository.findById(id);
   }
 
   /**
    * 根据用户ID和相册ID查找相册（确保是用户自己的相册）
+   * 委托给Repository处理，Repository层负责缓存管理
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Album | null> {
-    return this.albumRepository.findOneBy({ id, userId });
+    this.logger.debug(`查找用户相册: albumId=${id}, userId=${userId}`);
+    return await this.albumRepository.findByIdAndUserId(id, userId);
   }
 
   /**
    * 分页查询用户的相册
+   * 委托给Repository处理，Repository层决定是否使用缓存
    */
   async findByUserId(userId: string, queryDto: QueryAlbumDto): Promise<{
     albums: Album[];
@@ -50,74 +55,65 @@ export class AlbumService {
     totalPages: number;
   }> {
     const { page = 1, limit = 10, search } = queryDto;
-    const skip = (page - 1) * limit;
 
-    // 构建查询条件
-    const where: FindOptionsWhere<Album> = { userId };
-    if (search) {
-      where.albumName = Like(`%${search}%`);
+    // 验证分页参数
+    const validatedPage = Number.parseInt(page.toString(), 10);
+    const validatedLimit = Number.parseInt(limit.toString(), 10);
+
+    if (validatedPage < 1 || validatedLimit < 1 || validatedLimit > 100) {
+      throw new BadRequestException('分页参数无效');
     }
 
-    // 查询总数
-    const total = await this.albumRepository.count({ where });
+    this.logger.debug(`分页查询用户相册: userId=${userId}, page=${validatedPage}, limit=${validatedLimit}, search=${search}`);
 
-    // 查询数据
-    const albums = await this.albumRepository.find({
-      where,
-      order: {
-        createdAt: 'DESC',
-      },
-      skip,
-      take: limit,
-    });
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      albums,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+    return await this.albumRepository.findByUserId(userId, validatedPage, validatedLimit, search);
   }
 
   /**
    * 更新相册
+   * 委托给Repository处理，Repository层负责缓存清理
    */
   async update(id: string, userId: string, updateAlbumDto: UpdateAlbumDto): Promise<Album> {
-    const album = await this.findByIdAndUserId(id, userId);
-    if (!album) {
-      throw new NotFoundException('相册不存在或无权限操作');
-    }
+    this.logger.debug(`更新相册: albumId=${id}, userId=${userId}`);
 
-    if (updateAlbumDto.albumName) {
-      album.albumName = updateAlbumDto.albumName;
+    try {
+      const { updatedAlbum } = await this.albumRepository.update(id, userId, updateAlbumDto);
+      return updatedAlbum;
+    } catch (error) {
+      if (error.message === '相册不存在或无权限操作') {
+        throw new NotFoundException('相册不存在或无权限操作');
+      }
+      throw error;
     }
-
-    return this.albumRepository.save(album);
   }
 
   /**
-   * 删除相册（软删除或硬删除，这里使用硬删除）
+   * 删除相册（硬删除）
    * 注意：删除相册时，需要将关联的图片的 album_id 置为 0
+   * 委托给Repository处理，Repository层负责缓存清理
    */
   async delete(id: string, userId: string): Promise<void> {
-    const album = await this.findByIdAndUserId(id, userId);
-    if (!album) {
-      throw new NotFoundException('相册不存在或无权限操作');
-    }
+    this.logger.debug(`删除相册: albumId=${id}, userId=${userId}`);
 
-    // TODO: 这里需要在后续实现中，删除相册时将关联图片的 album_id 置为 0
-    // 目前先删除相册
-    await this.albumRepository.remove(album);
+    try {
+      await this.albumRepository.delete(id, userId);
+
+      // TODO: 这里需要在后续实现中，删除相册时将关联图片的 album_id 置为 0
+      // 目前先删除相册
+    } catch (error) {
+      if (error.message === '相册不存在或无权限操作') {
+        throw new NotFoundException('相册不存在或无权限操作');
+      }
+      throw error;
+    }
   }
 
   /**
    * 检查相册是否属于指定用户
+   * 委托给Repository处理，Repository层负责实时查询
    */
   async isAlbumBelongsToUser(albumId: string, userId: string): Promise<boolean> {
-    const album = await this.findByIdAndUserId(albumId, userId);
-    return !!album;
+    this.logger.debug(`检查相册归属: albumId=${albumId}, userId=${userId}`);
+    return await this.albumRepository.isAlbumBelongsToUser(albumId, userId);
   }
 }

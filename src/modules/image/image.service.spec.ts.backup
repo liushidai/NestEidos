@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ImageService } from './image.service';
+import { ImageRepository } from './repositories/image.repository';
+import { FileRepository } from './repositories/file.repository';
 import { Image } from './entities/image.entity';
 import { File } from './entities/file.entity';
 import { StorageService } from '../../services/storage.service';
@@ -14,8 +14,8 @@ import { QueryImageDto } from './dto/query-image.dto';
 
 describe('ImageService', () => {
   let service: ImageService;
-  let imageRepository: jest.Mocked<Repository<Image>>;
-  let fileRepository: jest.Mocked<Repository<File>>;
+  let imageRepository: jest.Mocked<ImageRepository>;
+  let fileRepository: jest.Mocked<FileRepository>;
   let storageService: jest.Mocked<StorageService>;
   let tempFileService: jest.Mocked<TempFileService>;
   let configService: jest.Mocked<ConfigService>;
@@ -56,20 +56,21 @@ describe('ImageService', () => {
     process.env.SECURE_ID_SECRET_KEY = 'test-secret-key-32-bytes-long';
 
     const mockImageRepository = {
+      findById: jest.fn(),
+      findByIdAndUserId: jest.fn(),
+      findByUserId: jest.fn(),
       create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-      findAndCount: jest.fn(),
-      remove: jest.fn(),
-      count: jest.fn(),
-      createQueryBuilder: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      isImageBelongsToUser: jest.fn(),
+      countByFileId: jest.fn(),
     };
 
     const mockFileRepository = {
-      findOne: jest.fn(),
+      findByHash: jest.fn(),
+      findById: jest.fn(),
       create: jest.fn(),
-      save: jest.fn(),
-      remove: jest.fn(),
+      delete: jest.fn(),
     };
 
     const mockStorageService = {
@@ -94,11 +95,11 @@ describe('ImageService', () => {
       providers: [
         ImageService,
         {
-          provide: getRepositoryToken(Image),
+          provide: ImageRepository,
           useValue: mockImageRepository,
         },
         {
-          provide: getRepositoryToken(File),
+          provide: FileRepository,
           useValue: mockFileRepository,
         },
         {
@@ -116,15 +117,17 @@ describe('ImageService', () => {
         {
           provide: SecureIdUtil,
           useValue: {
-            encode: jest.fn().mockReturnValue('encodedId'),
+            getInstance: jest.fn().mockReturnValue({
+              encode: jest.fn().mockReturnValue('encoded123'),
+            }),
           },
         },
       ],
     }).compile();
 
     service = module.get<ImageService>(ImageService);
-    imageRepository = module.get(getRepositoryToken(Image));
-    fileRepository = module.get(getRepositoryToken(File));
+    imageRepository = module.get(ImageRepository);
+    fileRepository = module.get(FileRepository);
     storageService = module.get(StorageService);
     tempFileService = module.get(TempFileService);
     configService = module.get(ConfigService);
@@ -136,19 +139,16 @@ describe('ImageService', () => {
 
   describe('findById', () => {
     it('should return image with file relation', async () => {
-      imageRepository.findOne.mockResolvedValue(mockImage);
+      imageRepository.findById.mockResolvedValue(mockImage);
 
       const result = await service.findById('1234567890123456789');
 
-      expect(imageRepository.findOne).toHaveBeenCalledWith({
-        where: { id: '1234567890123456789' },
-        relations: ['file'],
-      });
+      expect(imageRepository.findById).toHaveBeenCalledWith('1234567890123456789');
       expect(result).toEqual(mockImage);
     });
 
     it('should return null if image not found', async () => {
-      imageRepository.findOne.mockResolvedValue(null);
+      imageRepository.findById.mockResolvedValue(null);
 
       const result = await service.findById('nonexistent');
 
@@ -158,19 +158,16 @@ describe('ImageService', () => {
 
   describe('findByIdAndUserId', () => {
     it('should return image with file relation for valid user', async () => {
-      imageRepository.findOne.mockResolvedValue(mockImage);
+      imageRepository.findByIdAndUserId.mockResolvedValue(mockImage);
 
       const result = await service.findByIdAndUserId('1234567890123456789', '1234567890123456788');
 
-      expect(imageRepository.findOne).toHaveBeenCalledWith({
-        where: { id: '1234567890123456789', userId: '1234567890123456788' },
-        relations: ['file'],
-      });
+      expect(imageRepository.findByIdAndUserId).toHaveBeenCalledWith('1234567890123456789', '1234567890123456788');
       expect(result).toEqual(mockImage);
     });
 
     it('should return null if image not found or user not authorized', async () => {
-      imageRepository.findOne.mockResolvedValue(null);
+      imageRepository.findByIdAndUserId.mockResolvedValue(null);
 
       const result = await service.findByIdAndUserId('1234567890123456789', 'wrongUserId');
 
@@ -178,24 +175,7 @@ describe('ImageService', () => {
     });
   });
 
-  describe('findFileByHash', () => {
-    it('should return file if hash exists', async () => {
-      fileRepository.findOne.mockResolvedValue(mockFile);
-
-      const result = await service.findFileByHash(mockFile.hash);
-
-      expect(fileRepository.findOne).toHaveBeenCalledWith({ hash: mockFile.hash });
-      expect(result).toEqual(mockFile);
-    });
-
-    it('should return null if hash not found', async () => {
-      fileRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.findFileByHash('nonexistentHash');
-
-      expect(result).toBeNull();
-    });
-  });
+  // findFileByHash 方法已移到 FileRepository 中，不再在 Service 层暴露
 
   describe('update', () => {
     it('should update image title', async () => {
@@ -206,22 +186,14 @@ describe('ImageService', () => {
         updatedAt: new Date()
       };
 
-      imageRepository.findOne.mockResolvedValue(mockImage);
-      imageRepository.save.mockResolvedValue(updatedImage as any);
+      imageRepository.update.mockResolvedValue({
+        oldImage: mockImage,
+        updatedImage,
+      });
 
       const result = await service.update(mockImage.id, mockImage.userId, updateDto);
 
-      expect(imageRepository.findOne).toHaveBeenCalledWith({
-        where: { id: mockImage.id, userId: mockImage.userId },
-        relations: ['file'],
-      });
-      expect(imageRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ...mockImage,
-          title: updateDto.title,
-          updatedAt: expect.any(Date),
-        })
-      );
+      expect(imageRepository.update).toHaveBeenCalledWith(mockImage.id, mockImage.userId, updateDto);
       expect(result).toEqual(updatedImage);
     });
   });
