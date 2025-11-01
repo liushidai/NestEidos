@@ -353,11 +353,61 @@ import {
 
 ## API 设计
 
-### 1. RESTful API 规范
+### 1. RESTful API 路由规范
 
-- 使用复数名词作为资源名：`/api/users`, `/api/albums`
-- 使用 HTTP 方法表示操作：GET（查询）、POST（创建）、PUT/PATCH（更新）、DELETE（删除）
-- 使用 HTTP 状态码表示结果：200（成功）、201（创建）、400（客户端错误）、500（服务器错误）
+**原则：** 使用RESTful风格的API设计，区分单个资源操作和集合资源操作。
+
+#### 1.1 路由命名规则
+
+- **单个资源操作**：使用单数形式（如 `/api/user/{id}`, `/api/album/{id}`, `/api/image/{id}`）
+- **集合资源操作**：使用复数形式（如 `/api/users`, `/api/albums`, `/api/images`）
+- **当前用户操作**：针对当前认证用户的操作使用单数形式（如 `/api/user/profile`）
+
+#### 1.2 实际路由结构
+
+**单个资源操作（单数形式）：**
+- `/api/user/profile` - GET（获取当前用户信息）
+- `/api/user/check-auth` - GET（检查认证状态）
+- `/api/album/{id}` - GET/PATCH/DELETE（单个相册操作）
+- `/api/image/{id}` - GET/PATCH/DELETE（单张图片操作）
+- `/api/image/upload` - POST（上传图片）
+
+**集合资源操作（复数形式）：**
+- `/api/albums` - GET（分页查询相册列表）
+- `/api/images` - GET（分页查询图片列表）
+
+#### 1.3 控制器设计模式
+
+为了支持这种路由结构，采用控制器分离的设计：
+
+```typescript
+// 单个资源控制器 - 使用单数路径
+@Controller('album')
+export class ProtectedAlbumController {
+  @Get(':id')      // GET /api/album/{id}
+  @Patch(':id')    // PATCH /api/album/{id}
+  @Delete(':id')   // DELETE /api/album/{id}
+}
+
+// 集合资源控制器 - 使用复数路径
+@Controller('albums')
+export class AlbumsController {
+  @Get()           // GET /api/albums (分页查询)
+}
+```
+
+#### 1.4 HTTP方法和状态码
+
+- **GET**：查询资源（单个或集合）
+- **POST**：创建资源
+- **PATCH**：部分更新资源
+- **DELETE**：删除资源
+- **200**：操作成功
+- **201**：创建成功
+- **400**：客户端错误
+- **401**：未授权
+- **404**：资源不存在
+- **500**：服务器错误
 
 ### 2. 认证和授权
 

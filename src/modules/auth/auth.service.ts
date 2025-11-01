@@ -14,7 +14,6 @@ export class AuthService {
   private readonly tokenKeyPrefix: string;
 
   constructor(
-    @Inject(forwardRef(() => UserRepository))
     private userRepository: UserRepository,
     private cacheService: CacheService,
     private configService: ConfigService,

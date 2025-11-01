@@ -23,65 +23,13 @@ interface AuthenticatedRequest extends ExpressRequest {
 }
 
 @ApiTags('图片管理（需认证）')
-@Controller('images')
+@Controller('image')
 @UseGuards(TokenGuard)
 @ApiBearerAuth('token')
 export class ProtectedImageController {
   constructor(private readonly imageService: ImageService) {}
 
-  @Get()
-  @ApiOperation({ summary: '分页查询图片' })
-  @ApiQuery({ type: QueryImageDto })
-  @ApiResponse({
-    status: 200,
-    description: '查询成功',
-    schema: {
-      example: {
-        images: [
-          {
-            id: '1234567890123456789',
-            userId: '1234567890123456788',
-            albumId: '1234567890123456789',
-            originalName: 'photo.jpg',
-            title: '一只可爱的猫咪',
-            fileId: '1234567890123456790',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            updatedAt: '2024-01-01T00:00:00.000Z',
-            file: {
-              id: '1234567890123456790',
-              hash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
-              fileSize: 1024000,
-              mimeType: 'image/jpeg',
-              width: 1920,
-              height: 1080,
-              originalKey: 'images/2024/01/01/1234567890123456790.jpg',
-              webpKey: 'images/2024/01/01/1234567890123456790.webp',
-              avifKey: 'images/2024/01/01/1234567890123456790.avif',
-              hasWebp: true,
-              hasAvif: true,
-              convertWebpParamId: null,
-              convertAvifParamId: null,
-              createdAt: '2024-01-01T00:00:00.000Z',
-            },
-          },
-        ],
-        total: 1,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 401,
-    description: '认证令牌无效或已过期',
-  })
-  async findAll(@Query() queryDto: QueryImageDto, @Request() req: AuthenticatedRequest) {
-    const userId = req.user.userId;
-    const result = await this.imageService.findByUserId(userId, queryDto);
-    return result;
-  }
-
+  
   @Get(':id')
   @ApiOperation({ summary: '获取图片详情' })
   @ApiParam({ name: 'id', description: '图片ID' })

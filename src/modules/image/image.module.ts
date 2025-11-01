@@ -5,6 +5,7 @@ import { Image } from './entities/image.entity';
 import { ImageService } from './image.service';
 import { ImageRepository } from './repositories/image.repository';
 import { ProtectedImageController } from './protected-image.controller';
+import { ImagesController } from './images.controller';
 import { ImageUploadController } from './image-upload.controller';
 import { AuthModule } from '../auth/auth.module';
 import { StorageService } from '../../services/storage.service';
@@ -19,7 +20,7 @@ import { CacheModule } from '@/cache';
     ConfigModule,
     CacheModule,
   ],
-  controllers: [ProtectedImageController, ImageUploadController],
+  controllers: [ProtectedImageController, ImagesController, ImageUploadController],
   providers: [
     ImageService,
     ImageRepository,

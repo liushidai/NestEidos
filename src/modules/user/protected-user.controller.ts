@@ -10,7 +10,7 @@ interface AuthenticatedRequest extends ExpressRequest {
 }
 
 @ApiTags('用户管理（需认证）')
-@Controller('users')
+@Controller('user')
 @UseGuards(TokenGuard)
 @ApiBearerAuth('token')
 export class ProtectedUserController {
@@ -34,7 +34,7 @@ export class ProtectedUserController {
   })
   async getCurrentUserProfile(@Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
-    return this.userService.findById(userId);
+    return this.userService.getUserProfile(userId);
   }
 
   @Get('check-auth')

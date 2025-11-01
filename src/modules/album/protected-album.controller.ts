@@ -27,7 +27,7 @@ interface AuthenticatedRequest extends ExpressRequest {
 }
 
 @ApiTags('相册管理（需认证）')
-@Controller('albums')
+@Controller('album')
 @UseGuards(TokenGuard)
 @ApiBearerAuth('token')
 export class ProtectedAlbumController {
@@ -64,40 +64,7 @@ export class ProtectedAlbumController {
     return album;
   }
 
-  @Get()
-  @ApiOperation({ summary: '分页查询相册' })
-  @ApiQuery({ type: QueryAlbumDto })
-  @ApiResponse({
-    status: 200,
-    description: '查询成功',
-    schema: {
-      example: {
-        albums: [
-          {
-            id: '1234567890123456789',
-            userId: '1234567890123456788',
-            albumName: '我的相册',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            updatedAt: '2024-01-01T00:00:00.000Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 401,
-    description: '认证令牌无效或已过期',
-  })
-  async findAll(@Query() queryDto: QueryAlbumDto, @Request() req: AuthenticatedRequest) {
-    const userId = req.user.userId;
-    const result = await this.albumService.findByUserId(userId, queryDto);
-    return result;
-  }
-
+  
   @Get(':id')
   @ApiOperation({ summary: '获取相册详情' })
   @ApiParam({ name: 'id', description: '相册ID' })
