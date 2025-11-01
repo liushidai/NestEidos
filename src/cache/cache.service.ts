@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject, OnModuleDestroy } from '@nestjs/common';
 import { RedisClientType } from 'redis';
+import { ConfigService } from '@nestjs/config';
 import { TTL_CONFIGS, TTLUtils, TTLConfig } from './ttl.config';
 
 /**
@@ -9,11 +10,16 @@ import { TTL_CONFIGS, TTLUtils, TTLConfig } from './ttl.config';
 @Injectable()
 export class CacheService implements OnModuleDestroy {
   private readonly logger = new Logger(CacheService.name);
-  private readonly keyPrefix = 'nest_eidos:cache:';
+  private readonly keyPrefix: string;
   private readonly redis: RedisClientType;
 
-  constructor(@Inject('REDIS_CLIENT') redis: RedisClientType) {
+  constructor(
+    @Inject('REDIS_CLIENT') redis: RedisClientType,
+    private configService: ConfigService,
+  ) {
     this.redis = redis;
+    // 使用配置中的 REDIS_KEY_PREFIX，如果没有配置则使用默认值
+    this.keyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
   }
 
   async onModuleDestroy() {

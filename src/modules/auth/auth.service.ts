@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
-import { CacheService, TTL_CONFIGS, TTLUtils, TTLUnit } from '@/cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, TTLUnit, CacheKeyUtils } from '@/cache';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
@@ -11,7 +11,7 @@ import { UserRepository } from '../user/repositories/user.repository';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly tokenKeyPrefix: string;
+  private readonly redisKeyPrefix: string;
 
   constructor(
     private userRepository: UserRepository,
@@ -19,8 +19,8 @@ export class AuthService {
     private configService: ConfigService,
     @Inject('TTL_CONFIGS') private readonly ttlConfigs: typeof TTL_CONFIGS,
   ) {
-    // 统一使用配置中的键前缀，与CacheService保持一致
-    this.tokenKeyPrefix = this.configService.get<string>('auth.redis.keyPrefix') || 'auth:token:';
+    // 使用配置中的 REDIS_KEY_PREFIX
+    this.redisKeyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
   }
 
   /**
@@ -51,7 +51,7 @@ export class AuthService {
    * 获取token的完整缓存键
    */
   private getTokenCacheKey(token: string): string {
-    return `${this.tokenKeyPrefix}${token}`;
+    return CacheKeyUtils.buildAuthKeyWithPrefix(this.redisKeyPrefix, 'token', token);
   }
 
   /**

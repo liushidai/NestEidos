@@ -7,11 +7,6 @@ export const authConfig: ConfigFactory = registerAs('auth', () => ({
     bytesLength: Number.parseInt(process.env.AUTH_TOKEN_BYTES_LENGTH || '32', 10), // 默认32字节
   },
 
-  // Redis 配置
-  redis: {
-    keyPrefix: process.env.AUTH_REDIS_KEY_PREFIX || 'auth:token:',
-  },
-
   // 安全配置
   security: {
     bcryptRounds: Number.parseInt(process.env.AUTH_BCRYPT_ROUNDS || '10', 10), // 默认10轮

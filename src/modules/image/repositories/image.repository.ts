@@ -1,12 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Image } from '../entities/image.entity';
 import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class ImageRepository {
   private readonly logger = new Logger(ImageRepository.name);
+  private readonly redisKeyPrefix: string;
   private readonly CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.MEDIUM_CACHE); // 30分钟缓存
   private readonly NULL_CACHE_TTL = TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE); // 5分钟缓存空值
 
@@ -14,14 +16,18 @@ export class ImageRepository {
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
     private readonly cacheService: CacheService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    // 使用配置中的 REDIS_KEY_PREFIX
+    this.redisKeyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
+  }
 
   /**
    * 根据ID查找图片（带缓存，支持缓存穿透防护）
    */
   async findById(id: string): Promise<Image | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKey('image', 'id', id);
+      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'image', 'id', id);
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
@@ -65,7 +71,7 @@ export class ImageRepository {
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKey('image', 'user_image', `${userId}:${id}`);
+      const cacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'image', 'user_image', `${userId}:${id}`);
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
@@ -265,11 +271,11 @@ export class ImageRepository {
   private async clearImageCache(imageId: string, userId: string): Promise<void> {
     try {
       // 清理图片ID缓存
-      const imageIdCacheKey = CacheKeyUtils.buildRepositoryKey('image', 'id', imageId);
+      const imageIdCacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'image', 'id', imageId);
       await this.cacheService.delete(imageIdCacheKey);
 
       // 清理用户图片缓存
-      const userImageCacheKey = CacheKeyUtils.buildRepositoryKey('image', 'user_image', `${userId}:${imageId}`);
+      const userImageCacheKey = CacheKeyUtils.buildRepositoryKeyWithPrefix(this.redisKeyPrefix, 'image', 'user_image', `${userId}:${imageId}`);
       await this.cacheService.delete(userImageCacheKey);
 
       this.logger.debug(`清理图片缓存: imageId=${imageId}, userId=${userId}`);

@@ -196,4 +196,34 @@ export class CacheKeyUtils {
   static buildAuthKey(type: string, identifier: string): string {
     return `${CACHE_KEYS.AUTH}:${type}:${identifier}`;
   }
+
+  /**
+   * 生成带前缀的Repository层缓存键
+   * @param redisKeyPrefix Redis键前缀（从配置中获取）
+   * @param module 模块名（如 'user', 'album'）
+   * @param type 数据类型（如 'id', 'username'）
+   * @param identifier 标识符
+   */
+  static buildRepositoryKeyWithPrefix(
+    redisKeyPrefix: string,
+    module: string,
+    type: string,
+    identifier: string
+  ): string {
+    return `${redisKeyPrefix}${this.buildRepositoryKey(module, type, identifier)}`;
+  }
+
+  /**
+   * 生成带前缀的认证缓存键
+   * @param redisKeyPrefix Redis键前缀（从配置中获取）
+   * @param type 类型（如 'token'）
+   * @param identifier 标识符
+   */
+  static buildAuthKeyWithPrefix(
+    redisKeyPrefix: string,
+    type: string,
+    identifier: string
+  ): string {
+    return `${redisKeyPrefix}${this.buildAuthKey(type, identifier)}`;
+  }
 }
