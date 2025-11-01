@@ -1,6 +1,8 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { APP_FILTER } from '@nestjs/core';
+import { FileUploadExceptionFilter } from './common/filters/file-upload-exception.filter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ModulesModule } from './modules/modules.module';
@@ -40,7 +42,15 @@ import { CacheModule } from './cache';
   ],
   // 声明 AppController 为控制器，AppService 为服务提供者。
   controllers: [AppController],
-  providers: [AppService, ConfigValidationService],
+  providers: [
+    AppService,
+    ConfigValidationService,
+    // 全局异常过滤器：统一处理文件上传错误
+    {
+      provide: APP_FILTER,
+      useClass: FileUploadExceptionFilter,
+    },
+  ],
 })
 // 模块类本身，包含构造函数注入与 setupSwagger() 静态方法，用于配置 Swagger 文档。
 export class AppModule {
