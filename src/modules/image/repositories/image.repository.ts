@@ -28,7 +28,7 @@ export class ImageRepository {
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
-      if (cachedImage !== undefined) {
+      if (cachedImage !== null && cachedImage !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedImage)) {
           this.logger.debug(`从缓存获取图片空值标记（缓存穿透防护）: ${id}`);
@@ -72,7 +72,7 @@ export class ImageRepository {
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
-      if (cachedImage !== undefined) {
+      if (cachedImage !== null && cachedImage !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedImage)) {
           this.logger.debug(`从缓存获取用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}`);

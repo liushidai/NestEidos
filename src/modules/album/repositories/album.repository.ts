@@ -25,7 +25,7 @@ export class AlbumRepository {
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
-      if (cachedAlbum !== undefined) {
+      if (cachedAlbum !== null && cachedAlbum !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedAlbum)) {
           this.logger.debug(`从缓存获取空值标记（缓存穿透防护）: ${id}`);
@@ -66,7 +66,7 @@ export class AlbumRepository {
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
-      if (cachedAlbum !== undefined) {
+      if (cachedAlbum !== null && cachedAlbum !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedAlbum)) {
           this.logger.debug(`从缓存获取用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}`);

@@ -69,6 +69,22 @@ describe('AlbumRepository', () => {
       expect(albumRepository.findOneBy).not.toHaveBeenCalled();
     });
 
+    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+      jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
+
+      const result = await repository.findById('123456789');
+
+      expect(result).toEqual(mockAlbum);
+      expect(cacheService.get).toHaveBeenCalledWith('repo:album:id:123456789');
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789' });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:album:id:123456789',
+        mockAlbum,
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+      );
+    });
+
     it('应该从数据库获取相册并缓存', async () => {
       mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
@@ -109,6 +125,22 @@ describe('AlbumRepository', () => {
       expect(result).toEqual(mockAlbum);
       expect(cacheService.get).toHaveBeenCalledWith('repo:album:user_album:user123:123456789');
       expect(albumRepository.findOneBy).not.toHaveBeenCalled();
+    });
+
+    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+      jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
+
+      const result = await repository.findByIdAndUserId('123456789', 'user123');
+
+      expect(result).toEqual(mockAlbum);
+      expect(cacheService.get).toHaveBeenCalledWith('repo:album:user_album:user123:123456789');
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789', userId: 'user123' });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:album:user_album:user123:123456789',
+        mockAlbum,
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+      );
     });
 
     it('应该从数据库获取用户相册并缓存', async () => {

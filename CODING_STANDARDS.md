@@ -230,7 +230,83 @@ async update(id: string, updateData: Partial<User>): Promise<User> {
 }
 ```
 
-### 3. 缓存监控
+### 3. 缓存命中语义统一
+
+**问题背景**：项目中存在两种缓存服务，它们的返回值语义不同：
+- `SimpleCacheService.get()`: 缓存命中返回对象，未命中返回 `null`
+- `CacheService.get()`: 缓存命中返回对象，未命中返回 `undefined`
+
+**解决方案**：使用 `TTLUtils.fromCachedValue()` 工具方法统一处理
+
+**缓存命中判断模式**：
+```typescript
+// ✅ 正确：使用 fromCachedValue 统一处理
+async findById(id: string): Promise<User | null> {
+  const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'id', id);
+
+  // 尝试从缓存获取
+  const cachedUser = await this.cacheService.get<User>(cacheKey);
+  const realValue = TTLUtils.fromCachedValue(cachedUser);
+  if (realValue !== null) {
+    this.logger.debug(`从缓存获取用户: ${id}`);
+    return realValue;
+  }
+
+  // 缓存未命中，从数据库获取
+  this.logger.debug(`从数据库获取用户: ${id}`);
+  const user = await this.userRepository.findOneBy({ id });
+
+  // 缓存结果（无论是否存在都缓存）
+  if (user) {
+    await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE));
+  } else {
+    const nullMarker = TTLUtils.toCacheableNullValue<User>();
+    await this.cacheService.set(cacheKey, nullMarker, TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE));
+  }
+
+  return user;
+}
+```
+
+**错误示例**：
+```typescript
+// ❌ 错误：直接 !== undefined 判断
+const cachedUser = await this.cacheService.get<User>(cacheKey);
+if (cachedUser !== undefined) {  // 当 cachedUser 为 null 时会误判为命中
+  return cachedUser;             // 直接返回 null，不查询数据库
+}
+```
+
+**工具方法说明**：
+```typescript
+export class TTLUtils {
+  /**
+   * 统一处理缓存值，兼容两种缓存服务的返回语义
+   * @param cachedValue 缓存服务返回的值（可能是 null、undefined 或实际值）
+   * @returns 实际缓存值或 null（表示未命中或空值标记）
+   */
+  static fromCachedValue<T>(cachedValue: T): T | null {
+    if (cachedValue === null || cachedValue === undefined) {
+      return null;  // 缓存未命中
+    }
+
+    if (TTLUtils.isNullCacheValue(cachedValue)) {
+      return null;  // 缓存命中，但是是空值标记
+    }
+
+    return cachedValue;  // 缓存命中，返回实际值
+  }
+}
+```
+
+**缓存服务返回值对比表**：
+
+| 缓存服务 | 缓存命中 | 缓存未命中 | 处理方式 |
+|---------|---------|-----------|---------|
+| `SimpleCacheService` | 对象 或 空值标记 | `null` | `fromCachedValue()` |
+| `CacheService` | 对象 或 空值标记 | `undefined` | `fromCachedValue()` |
+
+### 4. 缓存监控
 
 **性能监控：**
 ```typescript
@@ -245,7 +321,7 @@ this.monitorService.recordOperation('delete', responseTime);
 - 跟踪响应时间
 - 记录错误率
 
-### 4. 缓存导入规范
+### 5. 缓存导入规范
 
 ```typescript
 // ✅ 正确：从统一缓存模块导入

@@ -25,7 +25,7 @@ export class FileRepository {
 
       // 尝试从缓存获取
       const cachedFile = await this.cacheService.get<File>(cacheKey);
-      if (cachedFile !== undefined) {
+      if (cachedFile !== null && cachedFile !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedFile)) {
           this.logger.debug(`从缓存获取文件空值标记（缓存穿透防护）: ${id}`);
@@ -66,7 +66,7 @@ export class FileRepository {
 
       // 尝试从缓存获取
       const cachedFile = await this.cacheService.get<File>(cacheKey);
-      if (cachedFile !== undefined) {
+      if (cachedFile !== null && cachedFile !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedFile)) {
           this.logger.debug(`从缓存获取文件哈希空值标记（缓存穿透防护）: ${hash}`);

@@ -74,6 +74,22 @@ describe('FileRepository', () => {
       expect(fileRepository.findOneBy).not.toHaveBeenCalled();
     });
 
+    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+      jest.spyOn(fileRepository, 'findOneBy').mockResolvedValue(mockFile);
+
+      const result = await repository.findById('file123');
+
+      expect(result).toEqual(mockFile);
+      expect(cacheService.get).toHaveBeenCalledWith('repo:file:id:file123');
+      expect(fileRepository.findOneBy).toHaveBeenCalledWith({ id: 'file123' });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:file:id:file123',
+        mockFile,
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+      );
+    });
+
     it('应该从数据库获取文件并缓存', async () => {
       mockCacheService.get.mockResolvedValue(undefined);
       jest.spyOn(fileRepository, 'findOneBy').mockResolvedValue(mockFile);
@@ -114,6 +130,22 @@ describe('FileRepository', () => {
       expect(result).toEqual(mockFile);
       expect(cacheService.get).toHaveBeenCalledWith('repo:file:hash:abc123');
       expect(fileRepository.findOneBy).not.toHaveBeenCalled();
+    });
+
+    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+      jest.spyOn(fileRepository, 'findOneBy').mockResolvedValue(mockFile);
+
+      const result = await repository.findByHash('abc123');
+
+      expect(result).toEqual(mockFile);
+      expect(cacheService.get).toHaveBeenCalledWith('repo:file:hash:abc123');
+      expect(fileRepository.findOneBy).toHaveBeenCalledWith({ hash: 'abc123' });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        'repo:file:hash:abc123',
+        mockFile,
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+      );
     });
 
     it('应该从数据库获取文件（哈希）并缓存', async () => {
