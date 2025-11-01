@@ -3,7 +3,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { AlbumModule } from './album/album.module';
 import { ImageModule } from './image/image.module';
-import { RedisModule } from '@/cache/monitoring/redis.module';
+import { RedisModule } from '@/cache';
 
 @Module({
   imports: [RedisModule, UserModule, AuthModule, AlbumModule, ImageModule],

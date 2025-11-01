@@ -3,12 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Album } from '../entities/album.entity';
 import { AlbumRepository } from './album.repository';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, NULL_CACHE_VALUES } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 describe('AlbumRepository', () => {
   let repository: AlbumRepository;
   let albumRepository: Repository<Album>;
-  let cacheService: SimpleCacheService;
+  let cacheService: CacheService;
 
   const mockAlbum = {
     id: '123456789',
@@ -43,7 +43,7 @@ describe('AlbumRepository', () => {
           },
         },
         {
-          provide: SimpleCacheService,
+          provide: CacheService,
           useValue: mockCacheService,
         },
       ],
@@ -51,7 +51,7 @@ describe('AlbumRepository', () => {
 
     repository = module.get<AlbumRepository>(AlbumRepository);
     albumRepository = module.get<Repository<Album>>(getRepositoryToken(Album));
-    cacheService = module.get<SimpleCacheService>(SimpleCacheService);
+    cacheService = module.get<CacheService>(CacheService);
   });
 
   afterEach(() => {
@@ -69,8 +69,8 @@ describe('AlbumRepository', () => {
       expect(albumRepository.findOneBy).not.toHaveBeenCalled();
     });
 
-    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
-      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+    it('应该处理CacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // CacheService未命中返回null
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
 
       const result = await repository.findById('123456789');
@@ -127,8 +127,8 @@ describe('AlbumRepository', () => {
       expect(albumRepository.findOneBy).not.toHaveBeenCalled();
     });
 
-    it('应该处理SimpleCacheService返回null的情况（缓存未命中）', async () => {
-      mockCacheService.get.mockResolvedValue(null); // SimpleCacheService未命中返回null
+    it('应该处理CacheService返回null的情况（缓存未命中）', async () => {
+      mockCacheService.get.mockResolvedValue(null); // CacheService未命中返回null
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
 
       const result = await repository.findByIdAndUserId('123456789', 'user123');

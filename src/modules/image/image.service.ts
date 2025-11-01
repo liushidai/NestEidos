@@ -99,7 +99,20 @@ export class ImageService {
       const format = getImageFormatByMimeType(fileData.mimetype);
       const extension = format?.extensions[0] || 'jpg';
 
-      // 9. 保存到数据库（使用实体字段映射）
+      // 9. 获取图片尺寸
+      let imageWidth = 1; // 默认值以满足数据库约束
+      let imageHeight = 1; // 默认值以满足数据库约束
+      try {
+        const metadata = await sharp(fileData.buffer).metadata();
+        if (metadata.width && metadata.height) {
+          imageWidth = metadata.width;
+          imageHeight = metadata.height;
+        }
+      } catch (error) {
+        this.logger.warn(`无法获取图片尺寸: ${error.message}`);
+      }
+
+      // 10. 保存到数据库（使用实体字段映射）
       const image = await this.imageRepository.create({
         id: imageId.toString(),
         userId,
@@ -109,8 +122,8 @@ export class ImageService {
         imageHash,
         imageSize: fileData.size,
         imageMimeType: fileData.mimetype,
-        imageWidth: 0, // TODO: 从sharp获取实际尺寸
-        imageHeight: 0, // TODO: 从sharp获取实际尺寸
+        imageWidth,
+        imageHeight,
         originalKey: outputFormat === 'original' ? `${imageId}.${extension}` : `${imageId}_original.${extension}`,
         jpegKey: outputFormat === 'jpeg' ? `${imageId}.jpg` : null,
         webpKey: outputFormat === 'webp' ? null : `${imageId}.webp`,

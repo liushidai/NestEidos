@@ -88,10 +88,19 @@ export class ImageUploadController {
   async uploadImage(
     @UploadedFile() // 文件验证已在 fileFilter 中完成，无需额外管道
     file: Express.Multer.File,
-    @Body() createImageDto: CreateImageDto,
+    @Body() uploadImageDto: UploadImageDto,
     @Request() req: AuthenticatedRequest,
   ): Promise<Image> {
     const userId = req.user.userId;
+
+    // 将 UploadImageDto 转换为 CreateImageDto 以兼容服务层
+    const createImageDto: CreateImageDto = {
+      title: uploadImageDto.title,
+      albumId: uploadImageDto.albumId,
+      format: uploadImageDto.defaultFormat,
+      expirePolicy: uploadImageDto.expirePolicy,
+      expiresAt: uploadImageDto.expiresAt,
+    };
 
     // fileFilter 已确保文件合法，无需重复验证
     // 直接进行业务处理：完整的图片处理逻辑已在服务层实现

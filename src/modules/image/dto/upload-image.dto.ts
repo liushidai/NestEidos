@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNotEmpty, IsIn, IsNumber, IsDateString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UploadImageDto {
   @ApiProperty({
@@ -48,6 +49,11 @@ export class UploadImageDto {
   @IsNumber()
   @IsOptional()
   @IsIn([1, 2, 3], { message: 'expirePolicy 必须是 1, 2, 3 之一' })
+  @Transform(({ value }) => {
+    // 统一转换为数字，支持字符串和数字输入
+    const num = Number(value);
+    return isNaN(num) ? undefined : num;
+  })
   expirePolicy?: number;
 
   @ApiProperty({

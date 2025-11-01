@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Image } from '../entities/image.entity';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class ImageRepository {
@@ -13,7 +13,7 @@ export class ImageRepository {
   constructor(
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
-    private readonly cacheService: SimpleCacheService,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**

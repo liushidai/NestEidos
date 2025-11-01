@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 import { Album } from '../entities/album.entity';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 @Injectable()
 export class AlbumRepository {
@@ -13,7 +13,7 @@ export class AlbumRepository {
   constructor(
     @InjectRepository(Album)
     private readonly albumRepository: Repository<Album>,
-    private readonly cacheService: SimpleCacheService,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**

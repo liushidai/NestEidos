@@ -3,6 +3,7 @@ import { ImageUploadController } from './image-upload.controller';
 import { ImageService } from './image.service';
 import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
+import { UploadImageDto } from './dto/upload-image.dto';
 
 describe('ImageUploadController', () => {
   let controller: ImageUploadController;
@@ -70,9 +71,10 @@ describe('ImageUploadController', () => {
 
   describe('uploadImage', () => {
     it('should upload image successfully', async () => {
-      const createImageDto: CreateImageDto = {
+      const uploadImageDto: UploadImageDto = {
         title: '测试图片',
         albumId: '0',
+        file: {} as Express.Multer.File, // 这个字段在控制器中由 @UploadedFile() 装饰器处理
       };
 
       const mockFileData: Express.Multer.File = {
@@ -96,10 +98,16 @@ describe('ImageUploadController', () => {
 
       const mockRequest = { user: mockUser } as any;
 
-      const result = await controller.uploadImage(mockFileData, createImageDto, mockRequest);
+      const result = await controller.uploadImage(mockFileData, uploadImageDto, mockRequest);
+
+      // 验证控制器正确转换了 DTO 并调用服务
+      const expectedCreateImageDto: CreateImageDto = {
+        title: '测试图片',
+        albumId: '0',
+      };
 
       expect(imageService.create).toHaveBeenCalledWith(
-        createImageDto,
+        expectedCreateImageDto,
         mockUser.userId,
         mockFileData
       );

@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
 import { User } from '../entities/user.entity';
 
 describe('UserRepository', () => {
   let userRepository: UserRepository;
   let mockRepository: jest.Mocked<Repository<User>>;
-  let cacheService: jest.Mocked<SimpleCacheService>;
+  let cacheService: jest.Mocked<CacheService>;
 
   const mockUser = {
     id: '1234567890123456789',
@@ -41,7 +41,7 @@ describe('UserRepository', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: SimpleCacheService,
+          provide: CacheService,
           useValue: mockCacheService,
         },
       ],
@@ -49,7 +49,7 @@ describe('UserRepository', () => {
 
     userRepository = module.get<UserRepository>(UserRepository);
     mockRepository = module.get(getRepositoryToken(User));
-    cacheService = module.get(SimpleCacheService);
+    cacheService = module.get(CacheService);
 
     // 清除所有 mock 调用记录
     jest.clearAllMocks();

@@ -87,24 +87,7 @@ export class TTLUtils {
     }
   }
 
-  /**
-   * 将TTL配置转换为cacheable支持的格式字符串
-   */
-  static toCacheableFormat(config: TTLConfig): string {
-    switch (config.unit) {
-      case TTLUnit.SECONDS:
-        return `${config.value}s`;
-      case TTLUnit.MINUTES:
-        return `${config.value}m`;
-      case TTLUnit.HOURS:
-        return `${config.value}h`;
-      case TTLUnit.DAYS:
-        return `${config.value}d`;
-      default:
-        throw new Error(`Unsupported TTL unit: ${config.unit}`);
-    }
-  }
-
+  
   /**
    * 将TTL配置转换为毫秒数
    */

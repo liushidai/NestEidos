@@ -3,12 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
 import { ImageRepository } from './image.repository';
-import { SimpleCacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
 
 describe('ImageRepository', () => {
   let repository: ImageRepository;
   let imageRepository: Repository<Image>;
-  let cacheService: SimpleCacheService;
+  let cacheService: CacheService;
 
   const mockImage: Image = {
     id: '123456789',
@@ -62,7 +62,7 @@ describe('ImageRepository', () => {
           },
         },
         {
-          provide: SimpleCacheService,
+          provide: CacheService,
           useValue: mockCacheService,
         },
       ],
@@ -70,7 +70,7 @@ describe('ImageRepository', () => {
 
     repository = module.get<ImageRepository>(ImageRepository);
     imageRepository = module.get<Repository<Image>>(getRepositoryToken(Image));
-    cacheService = module.get<SimpleCacheService>(SimpleCacheService);
+    cacheService = module.get<CacheService>(CacheService);
   });
 
   afterEach(() => {
