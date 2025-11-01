@@ -85,3 +85,8 @@ export class SnowflakeUtil {
     return Date.now();
   }
 }
+
+// 导出便利函数
+export function generateSnowflakeId(workerId: number = 1, datacenterId: number = 1): string {
+  return SnowflakeUtil.getInstance(workerId, datacenterId).nextId();
+}

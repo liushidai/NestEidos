@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class LoginUserDto {
   @ApiProperty({
     description: '用户名',
-    example: 'testuser',
+    example: 'testuser2',
     required: true,
     type: String,
   })
@@ -13,8 +13,8 @@ export class LoginUserDto {
   userName: string;
 
   @ApiProperty({
-    description: '密码',
-    example: 'password123',
+    description: '密码（必须至少8位，包含大写字母、小写字母、数字和特殊字符）',
+    example: 'Password123@',
     required: true,
     type: String,
   })

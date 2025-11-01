@@ -18,7 +18,6 @@ import { CreateImageDto } from './dto/create-image.dto';
 import { UploadImageDto } from './dto/upload-image.dto';
 import { ImageResponseDto } from './dto/image-response.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
-import { FileValidationPipe } from '../../pipes/file-validation.pipe';
 import { ImageUploadInterceptor } from '../../common/interceptors/image-upload.interceptor';
 import { Request as ExpressRequest } from 'express';
 
@@ -87,7 +86,7 @@ export class ImageUploadController {
     description: '认证令牌无效或已过期',
   })
   async uploadImage(
-    @UploadedFile(FileValidationPipe.createImagePipe()) // 文件验证已在 fileFilter 中完成
+    @UploadedFile() // 文件验证已在 fileFilter 中完成，无需额外管道
     file: Express.Multer.File,
     @Body() createImageDto: CreateImageDto,
     @Request() req: AuthenticatedRequest,
