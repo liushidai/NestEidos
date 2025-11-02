@@ -6,19 +6,16 @@ import {
   Delete,
   Param,
   Body,
-  Query,
   UseGuards,
   Request,
   HttpCode,
   HttpStatus,
   NotFoundException
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AlbumService } from './album.service';
-import { Album } from './entities/album.entity';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
-import { QueryAlbumDto } from './dto/query-album.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
 import { Request as ExpressRequest } from 'express';
 

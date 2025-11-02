@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsArray, IsNumberString, IsNotEmpty } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class QueryImageDto {
   @ApiProperty({
@@ -9,9 +8,8 @@ export class QueryImageDto {
     required: false,
   })
   @IsOptional()
-  @Type(() => Number)
   @IsNumberString()
-  page?: number = 1;
+  page?: string = '1';
 
   @ApiProperty({
     description: '每页数量',
@@ -19,9 +17,8 @@ export class QueryImageDto {
     required: false,
   })
   @IsOptional()
-  @Type(() => Number)
   @IsNumberString()
-  limit?: number = 10;
+  limit?: string = '10';
 
   @ApiProperty({
     description: '图片标题模糊搜索',

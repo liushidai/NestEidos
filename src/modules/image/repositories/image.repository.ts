@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
-import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils, NULL_CACHE_VALUES } from '../../../cache';
+import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
 
 @Injectable()
 export class ImageRepository {

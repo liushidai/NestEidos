@@ -1,6 +1,5 @@
 import { Request } from 'express';
 import {
-  ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_IMAGE_EXTENSIONS,
   isSupportedMimeType,
   isMimeTypeMatchingExtension,
@@ -9,8 +8,6 @@ import {
   EmptyFilenameError,
   MissingExtensionError,
   UnsupportedFileTypeError,
-  EmptyFileContentError,
-  FileTypeRecognitionError,
   FileContentMismatchError,
   FileValidationSystemError,
 } from '../errors/file-upload.errors';

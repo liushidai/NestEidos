@@ -206,8 +206,10 @@ export class ImageService {
    * 根据用户ID分页查询图片
    */
   async findByUserId(userId: string, queryDto: QueryImageDto) {
-    const { page = 1, limit = 20, albumId } = queryDto;
-    const skip = (page - 1) * limit;
+    const { page = '1', limit = '20', albumId } = queryDto;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
 
     const queryBuilder = this.imageRepository
       .createQueryBuilder('image')
@@ -220,15 +222,15 @@ export class ImageService {
     const [items, total] = await queryBuilder
       .orderBy('image.createdAt', 'DESC')
       .skip(skip)
-      .take(limit)
+      .take(limitNum)
       .getManyAndCount();
 
     return {
       items,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     };
   }
 

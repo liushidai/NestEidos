@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger, Inject } from '@nestjs/common';
 import { CacheService, TTL_CONFIGS, TTLUtils, TTLUnit, CacheKeyUtils } from '@/cache';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
