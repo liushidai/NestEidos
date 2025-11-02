@@ -1,7 +1,5 @@
 import { Injectable, Logger, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
@@ -19,14 +17,14 @@ import { StorageService } from '@/services/storage.service';
 import { ImageConversionService } from '@/services/image-conversion.service';
 import { SecureIdUtil } from '@/utils/secure-id.util';
 import { generateSnowflakeId } from '@/utils/snowflake.util';
+import { ImageRepository } from './repositories/image.repository';
 
 @Injectable()
 export class ImageService {
   private readonly logger = new Logger(ImageService.name);
 
   constructor(
-    @InjectRepository(Image)
-    private readonly imageRepository: Repository<Image>,
+    private readonly imageRepository: ImageRepository,
     private readonly configService: ConfigService,
     private readonly storageService: StorageService,
     private readonly imageConversionService: ImageConversionService,
@@ -153,7 +151,7 @@ export class ImageService {
       }
 
       // 11. 保存到数据库
-      const image = await this.imageRepository.create({
+      const imageData = {
         id: imageId.toString(),
         userId,
         albumId: createImageDto.albumId || '0',
@@ -181,9 +179,9 @@ export class ImageService {
         expiresAt,
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      };
 
-      const savedImage = await this.imageRepository.save(image);
+      const savedImage = await this.imageRepository.create(imageData);
 
       this.logger.log(
         `图片上传成功: ${fileData.originalname} -> ${savedImage.id}, 转换格式: [${formatsToConvert.join(', ')}]`
@@ -209,28 +207,22 @@ export class ImageService {
     const { page = '1', limit = '20', albumId } = queryDto;
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
-    const skip = (pageNum - 1) * limitNum;
 
-    const queryBuilder = this.imageRepository
-      .createQueryBuilder('image')
-      .where('image.userId = :userId', { userId });
-
-    if (albumId) {
-      queryBuilder.andWhere('image.albumId = :albumId', { albumId });
-    }
-
-    const [items, total] = await queryBuilder
-      .orderBy('image.createdAt', 'DESC')
-      .skip(skip)
-      .take(limitNum)
-      .getManyAndCount();
+    const result = await this.imageRepository.findByUserId(
+      userId,
+      pageNum,
+      limitNum,
+      undefined, // search
+      albumId,
+      undefined // mimeType
+    );
 
     return {
-      items,
-      total,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(total / limitNum),
+      items: result.images,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
     };
   }
 
@@ -241,20 +233,14 @@ export class ImageService {
    * 根据 ID 查找图片（公开访问用，不验证用户权限）
    */
   async findById(id: string) {
-    const image = await this.imageRepository.findOne({
-      where: { id },
-    });
-
-    return image;
+    return this.imageRepository.findById(id);
   }
 
   /**
    * 根据 ID 查找图片并验证用户权限
    */
   async findByIdAndUserId(id: string, userId: string) {
-    const image = await this.imageRepository.findOne({
-      where: { id, userId },
-    });
+    const image = await this.imageRepository.findByIdAndUserId(id, userId);
 
     if (!image) {
       throw new NotFoundException('图片不存在');
@@ -267,12 +253,8 @@ export class ImageService {
    * 更新图片信息
    */
   async update(id: string, userId: string, updateImageDto: UpdateImageDto) {
-    const image = await this.findByIdAndUserId(id, userId);
-
-    Object.assign(image, updateImageDto);
-    image.updatedAt = new Date();
-
-    return this.imageRepository.save(image);
+    const result = await this.imageRepository.update(id, userId, updateImageDto);
+    return result.updatedImage;
   }
 
   /**
@@ -302,7 +284,7 @@ export class ImageService {
       }
 
       // 从数据库删除记录
-      await this.imageRepository.remove(image);
+      await this.imageRepository.delete(id, userId);
 
       this.logger.log(`图片删除成功: ${id}`);
     } catch (error) {
