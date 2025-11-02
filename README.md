@@ -323,39 +323,53 @@ npm install
 
 ### 环境配置
 
-创建 `.env` 文件并配置环境变量：
+创建 `.env` 文件并配置环境变量。详细的配置说明请参考 `.env.example` 文件：
 
 ```env
-# 应用配置
-PORT=3000
-NODE_ENV=development
-
-# 数据库配置
+# 数据库配置 (PostgreSQL)
 DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=your_password
 DB_DATABASE=nest_eidos
 
-# Redis 配置
+# Redis 缓存配置
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=your_redis_password_here
+REDIS_DB=0
+REDIS_KEY_PREFIX=nest_eidos:
 
-# MinIO 配置
+# 认证系统配置
+AUTH_TOKEN_EXPIRES_IN=3600
+AUTH_TOKEN_BYTES_LENGTH=32
+AUTH_BCRYPT_ROUNDS=10
+AUTH_MAX_LOGIN_ATTEMPTS=5
+AUTH_LOCKOUT_TIME=900
+
+# MinIO 对象存储配置
 MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
 MINIO_ACCESS_KEY=your_minio_access_key
 MINIO_SECRET_KEY=your_minio_secret_key
 MINIO_BUCKET=images
+MINIO_USE_SSL=false
 
-# JWT 配置
-JWT_SECRET=your_super_secret_key
-JWT_EXPIRES_IN=1h
+# 安全ID加密配置
+SECURE_ID_SECRET_KEY=hex:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 
-# 安全配置
-SECURE_ID_SECRET_KEY=your_secure_id_secret_key
+# 应用基础配置
+PORT=3000
+NODE_ENV=development
+
+# 文件上传配置
+UPLOAD_MAX_FILE_SIZE=104857600
 ```
+
+**重要提示**：
+- 生产环境中必须使用强密码和密钥
+- `SECURE_ID_SECRET_KEY` 应使用 `openssl rand -hex 32` 生成
+- 详细的配置说明和安全建议请参考 `.env.example` 文件
 
 ### 启动服务
 
