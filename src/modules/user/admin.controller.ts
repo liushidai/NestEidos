@@ -9,7 +9,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
   NotFoundException,
   Request,
   BadRequestException,
@@ -29,7 +28,6 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ToggleUserStatusDto } from './dto/toggle-user-status.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
-import { ParseSnowflakeIdPipe } from './pipes/snowflake-id.pipe';
 import { Request as ExpressRequest } from 'express';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -71,7 +69,7 @@ export class AdminController {
     status: 401,
     description: '认证失败或权限不足',
   })
-  async getUserDetailById(@Param('id', ParseSnowflakeIdPipe) id: string) {
+  async getUserDetailById(@Param('id') id: string) {
     return this.userService.getUserDetailById(id);
   }
 
@@ -106,7 +104,7 @@ export class AdminController {
     description: '认证失败或权限不足',
   })
   async toggleUserStatus(
-    @Param('id', ParseSnowflakeIdPipe) id: string,
+    @Param('id') id: string,
     @Body() toggleUserStatusDto: ToggleUserStatusDto,
     @Request() req: AuthenticatedRequest,
   ) {
@@ -162,7 +160,7 @@ export class AdminController {
     description: '认证失败或权限不足',
   })
   async resetUserPassword(
-    @Param('id', ParseSnowflakeIdPipe) id: string,
+    @Param('id') id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
     @Request() req: AuthenticatedRequest,
   ) {
@@ -193,7 +191,7 @@ export class AdminController {
     status: 401,
     description: '认证失败或权限不足',
   })
-  async checkUserExists(@Param('id', ParseSnowflakeIdPipe) id: string) {
+  async checkUserExists(@Param('id') id: string) {
     const exists = await this.userService.userExists(id);
     return { exists };
   }
