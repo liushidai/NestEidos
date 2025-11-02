@@ -77,16 +77,6 @@ export const IMAGE_FORMATS: Record<string, ImageFormat> = {
       description: 'AVIF 图像格式',
     },
   },
-  TIFF: {
-    mime: 'image/tiff',
-    mimeAliases: ['image/tiff', 'image/tif'],
-    extensions: ['tiff', 'tif'],
-    meta: {
-      isBitmap: true,
-      supportsTransparency: true,
-      description: 'TIFF 图像格式',
-    },
-  },
   BMP: {
     mime: 'image/bmp',
     mimeAliases: ['image/bmp', 'image/x-ms-bmp'],

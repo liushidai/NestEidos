@@ -21,6 +21,8 @@ describe('ImageRepository', () => {
     imageMimeType: 'image/jpeg',
     imageWidth: 1920,
     imageHeight: 1080,
+    hasTransparency: false,
+    isAnimated: false,
     originalKey: 'originals/test.jpg',
     jpegKey: 'processed/test.jpg',
     webpKey: 'processed/test.webp',
@@ -28,9 +30,9 @@ describe('ImageRepository', () => {
     hasJpeg: true,
     hasWebp: true,
     hasAvif: true,
-    convertJpegParamId: null,
-    convertWebpParamId: null,
-    convertAvifParamId: null,
+    convertJpegParam: {},
+    convertWebpParam: {},
+    convertAvifParam: {},
     defaultFormat: 'avif',
     expirePolicy: 1,
     expiresAt: new Date('9999-12-31T23:59:59Z'),
@@ -98,7 +100,7 @@ describe('ImageRepository', () => {
       expect(cacheService.get).toHaveBeenCalledWith('repo:image:id:123456789');
       expect(imageRepository.findOne).toHaveBeenCalledWith({
         where: { id: '123456789' },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:image:id:123456789',
@@ -143,7 +145,7 @@ describe('ImageRepository', () => {
       expect(cacheService.get).toHaveBeenCalledWith('repo:image:user_image:user123:123456789');
       expect(imageRepository.findOne).toHaveBeenCalledWith({
         where: { id: '123456789', userId: 'user123' },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:image:user_image:user123:123456789',
@@ -200,7 +202,7 @@ describe('ImageRepository', () => {
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('image.title LIKE :search', { search: '%测试%' });
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('image.albumId = :albumId', { albumId: 'album123' });
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('file.mimeType IN (:...mimeType)', { mimeType: ['image/jpeg'] });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('image.imageMimeType IN (:...mimeType)', { mimeType: ['image/jpeg'] });
     });
   });
 
@@ -332,7 +334,7 @@ describe('ImageRepository', () => {
       // 验证数据库被调用
       expect(imageRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'nonexistent' },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
 
       // 验证空值被缓存
@@ -366,7 +368,7 @@ describe('ImageRepository', () => {
       // 验证数据库被调用
       expect(imageRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'nonexistent', userId: 'user123' },
-        relations: ['file'],
+        relations: ['user', 'album'],
       });
 
       // 验证空值被缓存

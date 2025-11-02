@@ -107,14 +107,19 @@ src/
 
 #### 图片表 (image) - 统一存储设计
 - **基础字段**: id, user_id, album_id, original_name, title, created_at, updated_at
-- **文件元数据**: image_hash, image_size, image_mime_type, image_width, image_height
+- **文件元数据**: image_hash, image_size, image_mime_type, image_width, image_height, has_transparency, is_animated
 - **存储路径**: original_key, jpeg_key, webp_key, avif_key (统一表结构，无需关联文件表)
 - **格式标识**: has_jpeg, has_webp, has_avif
+- **转换参数**: convert_jpeg_param, convert_webp_param, convert_avif_param (JSONB格式)
 - **配置字段**: default_format, expire_policy, expires_at
 - **扩展字段**: nsfw_score (预留)
 - **功能**: 存储图片所有相关信息，包括业务数据和存储信息
 - **特性**:
-  - 不再进行文件去重（image_hash 仅用于存储）
+  - 支持智能格式转换（根据原始格式自动选择转换策略）
+  - 完整元数据提取（透明度、动画、尺寸等）
+  - 质量参数配置（4种预设质量级别）
+  - BMP特殊处理（无损WebP替换原图 + 多格式转换）
+  - 不再进行文件去重（image_hash 仅用于完整性校验）
   - 支持过期策略（永久、限时保留、限时删除）
   - 支持默认返回格式设置（original/webp/avif）
   - 统一存储路径结构（originals/ 和 processed/）
@@ -144,12 +149,13 @@ src/
 
 #### 4. 图片模块 (Image)
 - 图片上传处理（支持多种格式）
-- 多格式自动转换 (JPEG, WebP, AVIF)
-- 图片元数据提取和存储
+- 智能多格式转换 (JPEG, WebP, AVIF)
+- 质量参数控制（通用/高质量/极限压缩/UI锐利）
+- 图片元数据提取和存储（透明度、动画检测）
 - 过期策略管理（永久/限时）
 - 图片查询和管理
 - NSFW 内容检测（预留）
-- 统一存储路径管理
+- 统一存储路径管理（originals/ 和 processed/）
 
 #### 5. 存储服务 (Storage)
 - MinIO对象存储集成
@@ -160,7 +166,8 @@ src/
 
 #### 性能优化
 - Redis缓存支持
-- 图片格式转换 (WebP, AVIF)
+- 智能图片格式转换 (JPEG, WebP, AVIF)
+- 4种质量预设参数（通用/高质量/极限压缩/UI锐利）
 - 批量操作支持
 - 数据库索引优化
 

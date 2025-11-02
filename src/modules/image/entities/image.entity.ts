@@ -37,6 +37,12 @@ export class Image {
   @Column({ name: 'image_height', type: 'integer' })
   imageHeight: number;
 
+  @Column({ name: 'has_transparency', type: 'boolean', default: false })
+  hasTransparency: boolean;
+
+  @Column({ name: 'is_animated', type: 'boolean', default: false })
+  isAnimated: boolean;
+
   @Column({ name: 'original_key', type: 'varchar', length: 512 })
   originalKey: string;
 
@@ -58,14 +64,14 @@ export class Image {
   @Column({ name: 'has_avif', type: 'boolean', default: false })
   hasAvif: boolean;
 
-  @Column({ name: 'convert_jpeg_param_id', type: 'bigint', nullable: true })
-  convertJpegParamId: string | null;
+  @Column({ name: 'convert_jpeg_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  convertJpegParam: Record<string, any>;
 
-  @Column({ name: 'convert_webp_param_id', type: 'bigint', nullable: true })
-  convertWebpParamId: string | null;
+  @Column({ name: 'convert_webp_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  convertWebpParam: Record<string, any>;
 
-  @Column({ name: 'convert_avif_param_id', type: 'bigint', nullable: true })
-  convertAvifParamId: string | null;
+  @Column({ name: 'convert_avif_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  convertAvifParam: Record<string, any>;
 
   @Column({ name: 'default_format', type: 'varchar', length: 20, default: 'avif' })
   defaultFormat: 'original' | 'webp' | 'avif';

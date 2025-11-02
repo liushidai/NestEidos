@@ -69,6 +69,8 @@ CREATE TABLE image (
     image_mime_type VARCHAR(64) NOT NULL,
     image_width INTEGER NOT NULL CHECK (image_width > 0),
     image_height INTEGER NOT NULL CHECK (image_height > 0),
+    has_transparency BOOLEAN NOT NULL DEFAULT FALSE,
+    is_animated       BOOLEAN NOT NULL DEFAULT FALSE,
     original_key VARCHAR(512) NOT NULL,
     jpeg_key VARCHAR(512),
     webp_key VARCHAR(512),
@@ -76,9 +78,9 @@ CREATE TABLE image (
     has_jpeg BOOLEAN NOT NULL DEFAULT false,
     has_webp BOOLEAN NOT NULL DEFAULT false,
     has_avif BOOLEAN NOT NULL DEFAULT false,
-    convert_jpeg_param_id BIGINT,
-    convert_webp_param_id BIGINT,
-    convert_avif_param_id BIGINT,
+    convert_jpeg_param JSONB NOT NULL DEFAULT '{}'::jsonb,
+    convert_webp_param JSONB NOT NULL DEFAULT '{}'::jsonb,  
+    convert_avif_param JSONB NOT NULL DEFAULT '{}'::jsonb,
     default_format VARCHAR(20) NOT NULL DEFAULT 'avif',
     expire_policy SMALLINT NOT NULL,
     expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT '9999-12-31 23:59:59'::timestamp,
@@ -105,6 +107,8 @@ COMMENT ON COLUMN image.image_size IS '原始文件大小，单位：字节';
 COMMENT ON COLUMN image.image_mime_type IS '原始 MIME 类型，如 image/jpeg、image/png';
 COMMENT ON COLUMN image.image_width IS '原始图片宽度，单位：像素（仅适用于图片）';
 COMMENT ON COLUMN image.image_height IS '原始图片高度，单位：像素（仅适用于图片）';
+COMMENT ON COLUMN image.has_transparency IS '原图是否包含透明通道（Alpha 通道），例如 PNG/WebP/AVIF 中的透明区域';
+COMMENT ON COLUMN image.is_animated IS '原图是否为动画图像（多帧），例如 GIF、动画 WebP 或动画 AVIF';
 COMMENT ON COLUMN image.original_key IS '原始文件在对象存储中的路径或键（key） 存储路径：originals/{url}';
 COMMENT ON COLUMN image.jpeg_key IS 'JPEG 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.jpg';
 COMMENT ON COLUMN image.webp_key IS 'WebP 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.webp';
@@ -112,9 +116,9 @@ COMMENT ON COLUMN image.avif_key IS 'AVIF 格式文件在对象存储中的路�
 COMMENT ON COLUMN image.has_jpeg IS '是否已成功生成 JPEG 格式';
 COMMENT ON COLUMN image.has_webp IS '是否已成功生成 WebP 格式';
 COMMENT ON COLUMN image.has_avif IS '是否已成功生成 AVIF 格式';
-COMMENT ON COLUMN image.convert_jpeg_param_id IS '生成 JPEG 时使用的转换参数配置ID，关联转换参数表';
-COMMENT ON COLUMN image.convert_webp_param_id IS '生成 WebP 时使用的转换参数配置ID，关联转换参数表';
-COMMENT ON COLUMN image.convert_avif_param_id IS '生成 AVIF 时使用的转换参数配置ID，关联转换参数表';
+COMMENT ON COLUMN image.convert_jpeg_param IS '生成 JPEG 时使用的转换参数配置';
+COMMENT ON COLUMN image.convert_webp_param IS '生成 WebP 时使用的转换参数配置';
+COMMENT ON COLUMN image.convert_avif_param IS '生成 AVIF 时使用的转换参数配置';
 COMMENT ON COLUMN image.default_format IS '图片通过 /i/{url} 路径返回时使用的默认格式。取值：
 - ''original'': 返回用户上传的原始文件（不做格式转换）
 - ''webp'': 返回系统生成的 WebP 格式（推荐默认）

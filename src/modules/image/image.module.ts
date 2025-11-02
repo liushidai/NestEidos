@@ -9,6 +9,7 @@ import { ImagesController } from './images.controller';
 import { ImageUploadController } from './image-upload.controller';
 import { AuthModule } from '../auth/auth.module';
 import { StorageService } from '../../services/storage.service';
+import { ImageConversionService } from '../../services/image-conversion.service';
 import { TempFileService } from '../../services/temp-file.service';
 import { SecureIdUtil } from '../../utils/secure-id.util';
 import { CacheModule } from '@/cache';
@@ -25,6 +26,7 @@ import { CacheModule } from '@/cache';
     ImageService,
     ImageRepository,
     StorageService,
+    ImageConversionService,
     TempFileService,
     SecureIdUtil,
   ],

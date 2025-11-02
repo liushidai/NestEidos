@@ -41,7 +41,7 @@ export class ImageUploadController {
   @ApiOperation({ summary: '上传图片' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: '上传图片文件，可选择指定相册ID、标题、默认格式和过期策略',
+    description: '上传图片文件，可选择指定相册ID、标题、默认格式、质量参数和过期策略',
     type: UploadImageDto,
   })
   @ApiResponse({
@@ -63,12 +63,14 @@ export class ImageUploadController {
       jpegKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.jpg',
       webpKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.webp',
       avifKey: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.avif',
+      hasTransparency: false,
+      isAnimated: false,
       hasJpeg: true,
       hasWebp: true,
       hasAvif: true,
-      convertJpegParamId: null,
-      convertWebpParamId: null,
-      convertAvifParamId: null,
+      convertJpegParam: {},
+      convertWebpParam: {},
+      convertAvifParam: {},
       defaultFormat: 'avif',
       expirePolicy: 1,
       expiresAt: '9999-12-31T23:59:59Z',
@@ -100,6 +102,7 @@ export class ImageUploadController {
       format: uploadImageDto.defaultFormat,
       expirePolicy: uploadImageDto.expirePolicy,
       expiresAt: uploadImageDto.expiresAt,
+      quality: uploadImageDto.quality,
     };
 
     // fileFilter 已确保文件合法，无需重复验证

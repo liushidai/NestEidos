@@ -1193,6 +1193,235 @@ constructor(
 - 缓存数据设置合理的过期时间
 - 定期清理过期的缓存数据
 
+## 图片处理规范
+
+### 1. 图片转换架构
+
+**原则：** 智能格式转换，根据原始格式自动选择最佳转换策略。
+
+#### 1.1 转换服务设计
+
+```typescript
+@Injectable()
+export class ImageConversionService {
+  /**
+   * 获取图片元数据
+   */
+  async getImageMetadata(buffer: Buffer): Promise<ImageMetadata> {
+    // 提取格式、尺寸、透明度、动画信息
+  }
+
+  /**
+   * 创建转换计划
+   */
+  createConversionPlan(metadata: ImageMetadata): ConversionPlan {
+    // 根据原始格式智能选择转换目标
+  }
+
+  /**
+   * 批量转换图片
+   */
+  async convertImageBatch(
+    buffer: Buffer,
+    formats: ('jpeg' | 'webp' | 'avif')[],
+    quality: number = 1,
+  ): Promise<ConversionResult[]> {
+    // 批量执行转换
+  }
+}
+```
+
+#### 1.2 转换规则表
+
+| 原始格式 | 生成JPG | 生成WebP | 生成AVIF | 特殊处理 |
+|---------|---------|----------|----------|----------|
+| SVG     | ❌      | ❌       | ❌       | 跳过转换 |
+| JPEG    | ✅      | ✅       | ✅       | - |
+| PNG     | ✅ (非动画) | ✅    | ✅       | 透明填白 |
+| GIF     | ❌      | ✅       | ✅       | 动画支持 |
+| WebP    | ✅ (非动画) | ✅    | ✅       | 动画支持 |
+| AVIF    | ✅ (非动画) | ✅    | ✅       | 动画支持 |
+| HEIF    | ✅ (非动画) | ✅    | ✅       | 动画支持 |
+| **BMP** | ✅       | ✅       | ✅       | 无损WebP替换原图 |
+
+### 2. 质量参数规范
+
+#### 2.1 质量预设定义
+
+```typescript
+export const QUALITY_MAPPING = {
+  1: 'general',        // 通用 - 平衡质量和大小
+  2: 'highQuality',    // 高质量 - 最佳质量
+  3: 'extremeCompression', // 极限压缩 - 最小文件大小
+  4: 'uiSharp'         // UI锐利 - 适合UI界面
+} as const;
+```
+
+#### 2.2 转换参数配置
+
+```typescript
+// JPEG参数
+export const JPEG_PRESETS = {
+  general: {
+    quality: 85,
+    progressive: true,
+    chromaSubsampling: '4:4:4',
+    strip: true
+  },
+  highQuality: {
+    quality: 95,
+    progressive: true,
+    chromaSubsampling: '4:2:0',
+    strip: true
+  },
+  // ... 其他预设
+};
+
+// WebP参数（支持透明度和动画）
+export const WEBP_PRESETS = {
+  general: (hasTransparency, isAnimated) => ({
+    quality: 85,
+    alphaQuality: hasTransparency ? 80 : undefined,
+    lossless: false,
+    reductionEffort: 6,
+    smartSubsample: true,
+    animated: isAnimated
+  }),
+  // ... 其他预设
+};
+
+// AVIF参数
+export const AVIF_PRESETS = {
+  general: (hasTransparency, isAnimated) => ({
+    quality: 70,
+    alphaQuality: hasTransparency ? 65 : undefined,
+    chromaSubsampling: '4:4:4',
+    speed: 0,
+    animated: isAnimated
+  }),
+  // ... 其他预设
+};
+```
+
+### 3. 存储路径规范
+
+#### 3.1 MinIO存储结构
+
+```
+MinIO Bucket:
+├── originals/                    # 原始文件存储目录
+│   └── {secureUrl}.{ext}        # 原始文件
+│
+└── processed/                  # 转换后文件存储目录
+    ├── {secureUrl}.jpg         # JPG格式
+    ├── {secureUrl}.webp        # WebP格式
+    └── {secureUrl}.avif        # AVIF格式
+```
+
+#### 3.2 安全URL生成
+
+```typescript
+// 使用Feistel网络生成安全URL
+const secureUrl = this.secureIdUtil.encode(BigInt(imageId));
+
+// 生成存储路径
+const originalKey = `originals/${secureUrl}.${originalExtension}`;
+const jpegKey = `processed/${secureUrl}.jpg`;
+const webpKey = `processed/${secureUrl}.webp`;
+const avifKey = `processed/${secureUrl}.avif`;
+```
+
+### 4. BMP特殊处理规范
+
+#### 4.1 BMP处理流程
+
+1. **无损转换**: 将原始BMP转换为无损WebP作为原图
+2. **多格式生成**: 同时生成JPG、有损WebP、AVIF三种格式
+3. **路径管理**: 无损WebP存储在originals/，其他格式存储在processed/
+
+```typescript
+// BMP特殊处理示例
+if (format === 'bmp') {
+  const bmpResult = await this.imageConversionService.convertBmpToLosslessWebP(fileData.buffer);
+  if (bmpResult.success) {
+    originalBuffer = bmpResult.buffer;
+    originalKey = `originals/${secureUrl}.webp`; // 替换原图
+    originalMimeType = 'image/webp';
+  }
+}
+```
+
+#### 4.2 无损WebP参数
+
+```typescript
+export const BMP_LOSSLESS_WEBP_PARAM = {
+  lossless: true,
+  reductionEffort: 6
+};
+```
+
+### 5. 元数据提取规范
+
+#### 5.1 图片元数据结构
+
+```typescript
+interface ImageMetadata {
+  format: string;           // 原始格式 (jpeg, png, gif, etc.)
+  hasAlpha: boolean;        // 是否有Alpha通道
+  pages?: number;          // 帧数（动画图片）
+  width: number;           // 宽度
+  height: number;          // 高度
+  hasTransparency: boolean; // 是否包含透明区域
+  isAnimated: boolean;     // 是否为动画
+}
+```
+
+#### 5.2 元数据提取实现
+
+```typescript
+async getImageMetadata(buffer: Buffer): Promise<ImageMetadata> {
+  const metadata = await sharp(buffer).metadata();
+
+  return {
+    format: metadata.format || 'unknown',
+    hasAlpha: metadata.hasAlpha || false,
+    pages: metadata.pages,
+    width: metadata.width || 0,
+    height: metadata.height || 0,
+    hasTransparency: !!(metadata.hasAlpha),
+    isAnimated: (metadata.pages || 1) > 1,
+  };
+}
+```
+
+### 6. 测试规范
+
+#### 6.1 转换测试
+
+```typescript
+describe('ImageConversionService', () => {
+  describe('BMP格式转换', () => {
+    it('应该为BMP格式生成JPG、WebP和AVIF', () => {
+      const bmpMetadata: ImageMetadata = {
+        format: 'bmp',
+        hasAlpha: false,
+        pages: 1,
+        width: 800,
+        height: 600,
+        hasTransparency: false,
+        isAnimated: false,
+      };
+
+      const plan = service.createConversionPlan(bmpMetadata);
+
+      expect(plan.shouldGenerateJpeg).toBe(true);
+      expect(plan.shouldGenerateWebp).toBe(true);
+      expect(plan.shouldGenerateAvif).toBe(true);
+    });
+  });
+});
+```
+
 ---
 
 **注意：** 本文档是活文档，会随着项目的发展不断更新。所有开发者在提交代码前应确保符合这些规范。

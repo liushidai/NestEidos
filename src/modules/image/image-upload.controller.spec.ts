@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
 import { ImageUploadController } from './image-upload.controller';
 import { ImageService } from './image.service';
+import { AuthService } from '../auth/auth.service';
 import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UploadImageDto } from './dto/upload-image.dto';
@@ -20,6 +22,8 @@ describe('ImageUploadController', () => {
     imageMimeType: 'image/jpeg',
     imageWidth: 1920,
     imageHeight: 1080,
+    hasTransparency: false,
+    isAnimated: false,
     originalKey: 'originals/test.jpg',
     jpegKey: 'processed/test.jpg',
     webpKey: 'processed/test.webp',
@@ -27,9 +31,9 @@ describe('ImageUploadController', () => {
     hasJpeg: true,
     hasWebp: true,
     hasAvif: true,
-    convertJpegParamId: null,
-    convertWebpParamId: null,
-    convertAvifParamId: null,
+    convertJpegParam: {},
+    convertWebpParam: {},
+    convertAvifParam: {},
     defaultFormat: 'avif',
     expirePolicy: 1,
     expiresAt: new Date('9999-12-31T23:59:59Z'),
@@ -48,16 +52,28 @@ describe('ImageUploadController', () => {
     create: jest.fn(),
   };
 
+  const mockAuthService = {
+    validateToken: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ConfigModule],
       controllers: [ImageUploadController],
       providers: [
         {
           provide: ImageService,
           useValue: mockImageService,
         },
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
+        },
       ],
-    }).compile();
+    })
+    .overrideGuard(require('../auth/guards/token.guard').TokenGuard)
+    .useValue({ canActivate: () => true })
+    .compile();
 
     controller = module.get<ImageUploadController>(ImageUploadController);
     imageService = module.get(ImageService) as jest.Mocked<ImageService>;
@@ -74,6 +90,7 @@ describe('ImageUploadController', () => {
       const uploadImageDto: UploadImageDto = {
         title: '测试图片',
         albumId: '0',
+        quality: 1,
         file: {} as Express.Multer.File, // 这个字段在控制器中由 @UploadedFile() 装饰器处理
       };
 
@@ -104,6 +121,7 @@ describe('ImageUploadController', () => {
       const expectedCreateImageDto: CreateImageDto = {
         title: '测试图片',
         albumId: '0',
+        quality: 1,
       };
 
       expect(imageService.create).toHaveBeenCalledWith(
@@ -112,6 +130,52 @@ describe('ImageUploadController', () => {
         mockFileData
       );
       expect(result).toEqual(mockImage);
+    });
+
+    it('should handle quality parameter correctly', async () => {
+      const uploadImageDto: UploadImageDto = {
+        title: '高质量图片',
+        albumId: '0',
+        quality: 2, // 高质量
+        defaultFormat: 'webp',
+        file: {} as Express.Multer.File,
+      };
+
+      const mockFileData: Express.Multer.File = {
+        originalname: 'test.jpg',
+        mimetype: 'image/jpeg',
+        size: 1024000,
+        buffer: Buffer.from('test'),
+        fieldname: 'file',
+        encoding: '7bit',
+        destination: '',
+        filename: '',
+        path: '',
+        stream: {
+          on: jest.fn(),
+          pipe: jest.fn(),
+          destroy: jest.fn(),
+        } as any,
+      };
+
+      imageService.create.mockResolvedValue(mockImage);
+
+      const mockRequest = { user: mockUser } as any;
+
+      await controller.uploadImage(mockFileData, uploadImageDto, mockRequest);
+
+      const expectedCreateImageDto: CreateImageDto = {
+        title: '高质量图片',
+        albumId: '0',
+        format: 'webp',
+        quality: 2,
+      };
+
+      expect(imageService.create).toHaveBeenCalledWith(
+        expectedCreateImageDto,
+        mockUser.userId,
+        mockFileData
+      );
     });
   });
 });

@@ -64,4 +64,18 @@ export class UploadImageDto {
   @IsDateString()
   @IsOptional()
   expiresAt?: string;
+
+  @ApiProperty({
+    description: '转换质量参数：1=通用，2=高质量，3=极限压缩，4=UI锐利',
+    example: 1,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  @IsIn([1, 2, 3, 4], { message: 'quality 必须是 1, 2, 3, 4 之一' })
+  @Transform(({ value }) => {
+    const num = Number(value);
+    return isNaN(num) ? undefined : num;
+  })
+  quality?: number;
 }

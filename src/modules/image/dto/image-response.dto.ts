@@ -63,6 +63,18 @@ export class ImageResponseDto {
   imageHeight: number;
 
   @ApiProperty({
+    description: '原图是否包含透明通道',
+    example: false,
+  })
+  hasTransparency: boolean;
+
+  @ApiProperty({
+    description: '原图是否为动画图像',
+    example: false,
+  })
+  isAnimated: boolean;
+
+  @ApiProperty({
     description: '原始文件在对象存储中的路径',
     example: 'originals/abc123def456.jpg',
   })
@@ -106,6 +118,24 @@ export class ImageResponseDto {
     example: true,
   })
   hasAvif: boolean;
+
+  @ApiProperty({
+    description: '生成 JPEG 时使用的转换参数配置',
+    example: {},
+  })
+  convertJpegParam: Record<string, any>;
+
+  @ApiProperty({
+    description: '生成 WebP 时使用的转换参数配置',
+    example: {},
+  })
+  convertWebpParam: Record<string, any>;
+
+  @ApiProperty({
+    description: '生成 AVIF 时使用的转换参数配置',
+    example: {},
+  })
+  convertAvifParam: Record<string, any>;
 
   @ApiProperty({
     description: '图片默认格式',

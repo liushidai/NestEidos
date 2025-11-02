@@ -3,39 +3,35 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import * as sharp from 'sharp';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 import { Image } from './entities/image.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { QueryImageDto } from './dto/query-image.dto';
 import { getImageFormatByMimeType } from '@/common/constants/image-formats';
-import { Request as ExpressRequest } from 'express';
-
+import {
+  JPEG_PRESETS,
+  WEBP_PRESETS,
+  AVIF_PRESETS,
+  QUALITY_MAPPING,
+  QualityType
+} from '@/common/constants/image-conversion-params';
+import { StorageService } from '@/services/storage.service';
+import { ImageConversionService } from '@/services/image-conversion.service';
+import { SecureIdUtil } from '@/utils/secure-id.util';
 import { generateSnowflakeId } from '@/utils/snowflake.util';
-
-interface AuthenticatedRequest extends ExpressRequest {
-  user?: {
-    userId: string;
-    [key: string]: any;
-  };
-}
 
 @Injectable()
 export class ImageService {
   private readonly logger = new Logger(ImageService.name);
-  private readonly storagePath: string;
 
   constructor(
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
     private readonly configService: ConfigService,
-  ) {
-    this.storagePath = this.configService.get<string>('app.upload.storagePath', './uploads');
-    // 确保上传目录存在
-    fs.mkdir(this.storagePath, { recursive: true }).catch(() => {});
-  }
+    private readonly storageService: StorageService,
+    private readonly imageConversionService: ImageConversionService,
+    private readonly secureIdUtil: SecureIdUtil,
+  ) {}
 
   async create(
     createImageDto: CreateImageDto,
@@ -43,67 +39,120 @@ export class ImageService {
     fileData: Express.Multer.File,
   ): Promise<Image> {
     const imageId = generateSnowflakeId();
-    const tempFilePath = path.join(this.storagePath, `${imageId}_temp${path.extname(fileData.originalname)}`);
+    const qualityType = QUALITY_MAPPING[createImageDto.quality as QualityType] || 'general';
 
     try {
-      // 1. 保存原始文件到临时位置
-      await fs.writeFile(tempFilePath, fileData.buffer);
-
-      // 2. 计算文件哈希 仅保存 后期判断完整性使用
-      const imageHash = this.calculateImageHash(fileData.buffer);
-
-      
-      // 3. 确定输出格式和路径
-      const outputFormat = createImageDto.format || 'webp';
-      const { webpPath, avifPath } = this.generateOutputPaths(imageId, this.storagePath, outputFormat);
-
-      // 4. 生成 WebP 版本（始终生成）
-      await this.convertToWebP(tempFilePath, webpPath);
-
-      // 5. 按需生成 AVIF 版本
-      if (outputFormat === 'avif') {
-        await this.convertToAvif(tempFilePath, avifPath);
+      // 1. 验证图片格式
+      if (!this.imageConversionService.isSupportedFormat(fileData.mimetype)) {
+        throw new BadRequestException(`不支持的图片格式: ${fileData.mimetype}`);
       }
 
-      // 6. 设置过期策略和时间（直接使用 DTO 中的值，已由 @Transform 处理）
+      // 2. 计算文件哈希（仅用于完整性校验）
+      const imageHash = this.calculateImageHash(fileData.buffer);
+
+      // 3. 获取图片元数据
+      const metadata = await this.imageConversionService.getImageMetadata(fileData.buffer);
+      const { width, height, hasTransparency, isAnimated, format } = metadata;
+
+      // 4. 生成安全的URL
+      const secureUrl = this.secureIdUtil.encode(BigInt(imageId));
+
+      // 5. 获取原始文件扩展名
+      const imageFormat = getImageFormatByMimeType(fileData.mimetype);
+      const originalExtension = imageFormat?.extensions[0] || 'jpg';
+
+      // 6. 创建转换计划
+      const conversionPlan = this.imageConversionService.createConversionPlan(metadata);
+
+      // 7. 准备转换参数
+      const convertJpegParam = conversionPlan.shouldGenerateJpeg ? JPEG_PRESETS[qualityType] : {};
+      const convertWebpParam = conversionPlan.shouldGenerateWebp
+        ? (format === 'bmp' ? { lossless: true, reductionEffort: 6 } : WEBP_PRESETS[qualityType](hasTransparency, isAnimated))
+        : {};
+      const convertAvifParam = conversionPlan.shouldGenerateAvif ? AVIF_PRESETS[qualityType](hasTransparency, isAnimated) : {};
+
+      // 8. 上传原始文件
+      let originalBuffer = fileData.buffer;
+      let originalKey = `originals/${secureUrl}.${originalExtension}`;
+      let originalMimeType = fileData.mimetype;
+
+      // BMP特殊处理：转换为无损WebP替换原图
+      if (format === 'bmp') {
+        const bmpResult = await this.imageConversionService.convertBmpToLosslessWebP(fileData.buffer);
+        if (bmpResult.success) {
+          originalBuffer = bmpResult.buffer;
+          originalKey = `originals/${secureUrl}.webp`;
+          originalMimeType = 'image/webp'; // 更新MIME类型
+        } else {
+          throw new InternalServerErrorException(`BMP转换失败: ${bmpResult.error}`);
+        }
+      }
+
+      await this.storageService.upload(originalKey, originalBuffer, originalMimeType);
+
+      // 9. 转换并上传其他格式
+      let jpegKey: string | null = null;
+      let webpKey: string | null = null;
+      let avifKey: string | null = null;
+
+      const formatsToConvert: ('jpeg' | 'webp' | 'avif')[] = [];
+      if (conversionPlan.shouldGenerateJpeg) formatsToConvert.push('jpeg');
+      if (conversionPlan.shouldGenerateWebp) formatsToConvert.push('webp'); // 包含BMP的有损WebP转换
+      if (conversionPlan.shouldGenerateAvif) formatsToConvert.push('avif');
+
+      if (formatsToConvert.length > 0) {
+        const conversionResults = await this.imageConversionService.convertImageBatch(
+          fileData.buffer,
+          formatsToConvert,
+          createImageDto.quality || 1,
+        );
+
+        for (const result of conversionResults) {
+          if (result.success) {
+            const key = `processed/${secureUrl}.${result.format}`;
+            const mimeType = `image/${result.format}`;
+
+            await this.storageService.upload(key, result.buffer, mimeType);
+
+            switch (result.format) {
+              case 'jpeg':
+                jpegKey = key;
+                break;
+              case 'webp':
+                webpKey = key;
+                break;
+              case 'avif':
+                avifKey = key;
+                break;
+            }
+          } else {
+            this.logger.warn(`图片转换失败: ${format} -> ${result.format}, 错误: ${result.error}`);
+          }
+        }
+      }
+
+      // 10. 设置过期策略和时间
       const expirePolicy = createImageDto.expirePolicy || 1;
       let expiresAt: Date;
 
       switch (expirePolicy) {
         case 1: // 永久
-          expiresAt = new Date('2099-12-31T23:59:59.999Z');
+          expiresAt = new Date('9999-12-31T23:59:59.999Z');
           break;
         case 2: // 指定时间
           expiresAt = createImageDto.expiresAt
             ? new Date(createImageDto.expiresAt)
-            : new Date('2099-12-31T23:59:59.999Z');
+            : new Date('9999-12-31T23:59:59.999Z');
           break;
         case 3: // 7天后
           expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 7);
           break;
         default:
-          expiresAt = new Date('2099-12-31T23:59:59.999Z');
+          expiresAt = new Date('9999-12-31T23:59:59.999Z');
       }
 
-      // 8. 获取 MIME 类型对应的扩展名
-      const format = getImageFormatByMimeType(fileData.mimetype);
-      const extension = format?.extensions[0] || 'jpg';
-
-      // 9. 获取图片尺寸
-      let imageWidth = 1; // 默认值以满足数据库约束
-      let imageHeight = 1; // 默认值以满足数据库约束
-      try {
-        const metadata = await sharp(fileData.buffer).metadata();
-        if (metadata.width && metadata.height) {
-          imageWidth = metadata.width;
-          imageHeight = metadata.height;
-        }
-      } catch (error) {
-        this.logger.warn(`无法获取图片尺寸: ${error.message}`);
-      }
-
-      // 10. 保存到数据库（使用实体字段映射）
+      // 11. 保存到数据库
       const image = await this.imageRepository.create({
         id: imageId.toString(),
         userId,
@@ -113,17 +162,22 @@ export class ImageService {
         imageHash,
         imageSize: fileData.size,
         imageMimeType: fileData.mimetype,
-        imageWidth,
-        imageHeight,
-        originalKey: outputFormat === 'original' ? `${imageId}.${extension}` : `${imageId}_original.${extension}`,
-        jpegKey: outputFormat === 'jpeg' ? `${imageId}.jpg` : null,
-        webpKey: outputFormat === 'webp' ? null : `${imageId}.webp`,
-        avifKey: outputFormat === 'avif' ? null : `${imageId}.avif`,
-        hasJpeg: outputFormat === 'jpeg',
-        hasWebp: outputFormat !== 'webp',
-        hasAvif: outputFormat !== 'avif',
-        defaultFormat: outputFormat as 'original' | 'webp' | 'avif',
-        expirePolicy: expirePolicy,
+        imageWidth: width,
+        imageHeight: height,
+        hasTransparency,
+        isAnimated,
+        originalKey,
+        jpegKey,
+        webpKey,
+        avifKey,
+        hasJpeg: !!jpegKey,
+        hasWebp: !!webpKey,
+        hasAvif: !!avifKey,
+        convertJpegParam,
+        convertWebpParam,
+        convertAvifParam,
+        defaultFormat: createImageDto.format as 'original' | 'webp' | 'avif' || 'avif',
+        expirePolicy,
         expiresAt,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -131,18 +185,13 @@ export class ImageService {
 
       const savedImage = await this.imageRepository.save(image);
 
-      this.logger.log(`图片上传成功: ${fileData.originalname} -> ${savedImage.id}`);
+      this.logger.log(
+        `图片上传成功: ${fileData.originalname} -> ${savedImage.id}, 转换格式: [${formatsToConvert.join(', ')}]`
+      );
       return savedImage;
 
     } catch (error) {
       this.logger.error(`图片上传失败: ${fileData.originalname}`, error);
-
-      // 清理临时文件
-      try {
-        await fs.unlink(tempFilePath);
-      } catch {
-        // 忽略清理错误
-      }
 
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       throw new InternalServerErrorException(`图片处理失败: ${errorMessage}`);
@@ -151,25 +200,6 @@ export class ImageService {
 
   private calculateImageHash(buffer: Buffer): string {
     return crypto.createHash('md5').update(buffer).digest('hex');
-  }
-
-  private generateOutputPaths(imageId: string, storagePath: string, format: string) {
-    const timestamp = Date.now();
-    const webpPath = path.join(storagePath, `${imageId}_${timestamp}.webp`);
-    const avifPath = path.join(storagePath, `${imageId}_${timestamp}.avif`);
-    return { webpPath, avifPath };
-  }
-
-  private async convertToWebP(inputPath: string, outputPath: string): Promise<void> {
-    // 确保目录存在
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await sharp(inputPath, { animated: true }).toFile(outputPath);
-  }
-
-  private async convertToAvif(inputPath: string, outputPath: string): Promise<void> {
-    // 确保目录存在
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await sharp(inputPath, { animated: true }).toFile(outputPath);
   }
 
   /**
@@ -235,8 +265,33 @@ export class ImageService {
   async delete(id: string, userId: string) {
     const image = await this.findByIdAndUserId(id, userId);
 
-    // TODO: 删除物理文件
+    try {
+      // 收集要删除的文件键
+      const keysToDelete: string[] = [];
 
-    await this.imageRepository.remove(image);
+      // 添加原始文件
+      if (image.originalKey) {
+        keysToDelete.push(image.originalKey);
+      }
+
+      // 添加转换后的文件
+      if (image.jpegKey) keysToDelete.push(image.jpegKey);
+      if (image.webpKey) keysToDelete.push(image.webpKey);
+      if (image.avifKey) keysToDelete.push(image.avifKey);
+
+      // 从MinIO删除文件
+      if (keysToDelete.length > 0) {
+        await this.storageService.deleteMany(keysToDelete);
+        this.logger.debug(`已删除 ${keysToDelete.length} 个文件: ${keysToDelete.join(', ')}`);
+      }
+
+      // 从数据库删除记录
+      await this.imageRepository.remove(image);
+
+      this.logger.log(`图片删除成功: ${id}`);
+    } catch (error) {
+      this.logger.error(`删除图片失败: ${id}`, error);
+      throw new InternalServerErrorException(`删除图片失败: ${error.message}`);
+    }
   }
 }
