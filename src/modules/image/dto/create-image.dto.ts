@@ -38,10 +38,10 @@ export class CreateImageDto {
     description: '图片默认格式',
     example: 'webp',
     required: false,
-    enum: ['webp', 'avif', 'original'],
+    enum: ['original', 'jpeg', 'webp', 'avif'],
   })
   @IsOptional()
-  @IsIn(['webp', 'avif', 'original'], { message: 'format 必须是 webp, avif, original 之一' })
+  @IsIn(['original', 'jpeg', 'webp', 'avif'], { message: 'format 必须是 original, jpeg, webp, avif 之一' })
   format?: string;
 
   @ApiProperty({

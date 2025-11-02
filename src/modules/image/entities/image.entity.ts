@@ -74,7 +74,7 @@ export class Image {
   convertAvifParam: Record<string, any>;
 
   @Column({ name: 'default_format', type: 'varchar', length: 20, default: 'avif' })
-  defaultFormat: 'original' | 'webp' | 'avif';
+  defaultFormat: 'original' | 'jpeg' | 'webp' | 'avif';
 
   @Column({ name: 'expire_policy', type: 'smallint' })
   expirePolicy: number;

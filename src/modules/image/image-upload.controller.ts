@@ -70,7 +70,7 @@ export class ImageUploadController {
         convertJpegParam: { type: 'object', example: {}, description: 'JPEG转换参数' },
         convertWebpParam: { type: 'object', example: {}, description: 'WebP转换参数' },
         convertAvifParam: { type: 'object', example: {}, description: 'AVIF转换参数' },
-        defaultFormat: { type: 'string', example: 'avif', enum: ['original', 'webp', 'avif'], description: '默认格式' },
+        defaultFormat: { type: 'string', example: 'avif', enum: ['original', 'jpeg', 'webp', 'avif'], description: '默认格式' },
         expirePolicy: { type: 'number', example: 1, enum: [1, 2, 3], description: '过期策略' },
         expiresAt: { type: 'string', example: '2024-12-31T23:59:59.000Z', description: '过期时间' },
         nsfwScore: { type: 'number', example: null, description: 'NSFW分数' },

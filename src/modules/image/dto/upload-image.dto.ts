@@ -33,13 +33,13 @@ export class UploadImageDto {
   @ApiProperty({
     description: '图片默认格式',
     example: 'avif',
-    enum: ['original', 'webp', 'avif'],
+    enum: ['original', 'jpeg', 'webp', 'avif'],
     required: false,
   })
   @IsString()
   @IsOptional()
-  @IsIn(['original', 'webp', 'avif'], { message: 'defaultFormat 必须是 original, webp, avif 之一' })
-  defaultFormat?: 'original' | 'webp' | 'avif';
+  @IsIn(['original', 'jpeg', 'webp', 'avif'], { message: 'defaultFormat 必须是 original, jpeg, webp, avif 之一' })
+  defaultFormat?: 'original' | 'jpeg' | 'webp' | 'avif';
 
   @ApiProperty({
     description: '过期策略：1=永久保存，2=限时保留，3=限时删除',

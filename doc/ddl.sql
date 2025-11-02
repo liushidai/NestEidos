@@ -87,8 +87,8 @@ CREATE TABLE image (
     nsfw_score REAL CHECK (nsfw_score >= 0.0 AND nsfw_score <= 1.0),
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-      -- 约束：default_format 只能是预定义的三种值
-    CONSTRAINT chk_image_default_format CHECK (default_format IN ('original', 'webp', 'avif')),
+      -- 约束：default_format 只能是预定义的四种值
+    CONSTRAINT chk_image_default_format CHECK (default_format IN ('original','jpeg', 'webp', 'avif')),
         -- 约束：expire_policy 只能是 1, 2, 3
     CONSTRAINT chk_image_expire_policy CHECK (expire_policy IN (1, 2, 3))
 );
@@ -121,6 +121,7 @@ COMMENT ON COLUMN image.convert_webp_param IS '生成 WebP 时使用的转换参
 COMMENT ON COLUMN image.convert_avif_param IS '生成 AVIF 时使用的转换参数配置';
 COMMENT ON COLUMN image.default_format IS '图片通过 /i/{url} 路径返回时使用的默认格式。取值：
 - ''original'': 返回用户上传的原始文件（不做格式转换）
+- ''jpeg'': 返回系统生成的 JPEG 格式
 - ''webp'': 返回系统生成的 WebP 格式（推荐默认）
 - ''avif'': 返回系统生成的 AVIF 格式
 该值在图片处理完成后由系统确定，后期不再变更。';

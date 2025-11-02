@@ -176,7 +176,7 @@ export class ImageService {
         convertJpegParam,
         convertWebpParam,
         convertAvifParam,
-        defaultFormat: createImageDto.format as 'original' | 'webp' | 'avif' || 'avif',
+        defaultFormat: createImageDto.format as 'original' | 'jpeg' | 'webp' | 'avif' || 'avif',
         expirePolicy,
         expiresAt,
         createdAt: new Date(),
