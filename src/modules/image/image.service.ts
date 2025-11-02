@@ -49,32 +49,23 @@ export class ImageService {
       // 1. 保存原始文件到临时位置
       await fs.writeFile(tempFilePath, fileData.buffer);
 
-      // 2. 计算文件哈希（用于去重）
+      // 2. 计算文件哈希 仅保存 后期判断完整性使用
       const imageHash = this.calculateImageHash(fileData.buffer);
 
-      // 3. 检查是否已存在相同的图片
-      const existingImage = await this.imageRepository.findOne({
-        where: { userId, imageHash },
-      });
-
-      if (existingImage) {
-        await fs.unlink(tempFilePath); // 清理临时文件
-        return existingImage;
-      }
-
-      // 4. 确定输出格式和路径
+      
+      // 3. 确定输出格式和路径
       const outputFormat = createImageDto.format || 'webp';
       const { webpPath, avifPath } = this.generateOutputPaths(imageId, this.storagePath, outputFormat);
 
-      // 5. 生成 WebP 版本（始终生成）
+      // 4. 生成 WebP 版本（始终生成）
       await this.convertToWebP(tempFilePath, webpPath);
 
-      // 6. 按需生成 AVIF 版本
+      // 5. 按需生成 AVIF 版本
       if (outputFormat === 'avif') {
         await this.convertToAvif(tempFilePath, avifPath);
       }
 
-      // 7. 设置过期策略和时间（直接使用 DTO 中的值，已由 @Transform 处理）
+      // 6. 设置过期策略和时间（直接使用 DTO 中的值，已由 @Transform 处理）
       const expirePolicy = createImageDto.expirePolicy || 1;
       let expiresAt: Date;
 
