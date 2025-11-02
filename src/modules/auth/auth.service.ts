@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { UserRepository } from '../user/repositories/user.repository';
@@ -253,5 +254,55 @@ export class AuthService {
     }
 
     return userData;
+  }
+
+  /**
+   * 修改密码
+   */
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<{ success: boolean; message: string }> {
+    try {
+      // 根据用户ID查找用户
+      const user = await this.userRepository.findById(userId);
+
+      if (!user) {
+        throw new UnauthorizedException('用户不存在');
+      }
+
+      // 检查用户状态
+      if (user.userStatus !== 1) {
+        throw new UnauthorizedException('用户状态异常，无法修改密码');
+      }
+
+      // 验证旧密码
+      const isOldPasswordValid = await bcrypt.compare(changePasswordDto.oldPassword, user.passWord);
+
+      if (!isOldPasswordValid) {
+        throw new UnauthorizedException('旧密码不正确');
+      }
+
+      // 检查新密码是否与旧密码相同
+      const isSamePassword = await bcrypt.compare(changePasswordDto.newPassword, user.passWord);
+
+      if (isSamePassword) {
+        throw new ConflictException('新密码不能与旧密码相同');
+      }
+
+      // 加密新密码
+      const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
+      const hashedNewPassword = await bcrypt.hash(changePasswordDto.newPassword, bcryptRounds);
+
+      // 更新密码
+      await this.userRepository.update(user.id, { passWord: hashedNewPassword });
+
+      this.logger.log(`用户 ${user.userName} 密码修改成功`);
+
+      return {
+        success: true,
+        message: '密码修改成功'
+      };
+    } catch (error) {
+      this.logger.error(`用户 ${userId} 修改密码失败: ${error.message}`);
+      throw error;
+    }
   }
 }

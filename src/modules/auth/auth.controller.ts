@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from '../user/entities/user.entity';
 import { TokenGuard } from './guards/token.guard';
 import { Request as ExpressRequest } from 'express';
@@ -116,5 +117,42 @@ export class AuthController {
   @UseGuards(TokenGuard)
   async getProfile(@Request() req: AuthenticatedRequest) {
     return req.user;
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '修改密码' })
+  @ApiBearerAuth('token')
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: '密码修改成功',
+    schema: {
+      example: {
+        success: true,
+        message: '密码修改成功'
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '请求参数错误',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '认证失败或旧密码不正确',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '新密码与旧密码相同',
+  })
+  @UseGuards(TokenGuard)
+  async changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    // 从Token验证后的用户信息中获取用户ID
+    const userId = req.user.userId;
+    return this.authService.changePassword(userId, changePasswordDto);
   }
 }

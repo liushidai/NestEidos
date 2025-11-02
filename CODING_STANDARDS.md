@@ -99,13 +99,20 @@ modules/{module-name}/
 ├── dto/                          # 数据传输对象
 │   ├── create-{entity-name}.dto.ts
 │   ├── update-{entity-name}.dto.ts
-│   └── query-{entity-name}.dto.ts
+│   ├── query-{entity-name}.dto.ts
+│   └── admin/                    # 管理员专用DTO
+│       ├── admin-{entity-name}-query.dto.ts
+│       ├── reset-{entity-name}-password.dto.ts
+│       └── toggle-{entity-name}-status.dto.ts
 ├── controllers/                  # 控制器
 │   ├── protected-{entity-name}.controller.ts  # 需要认证的接口
 │   ├── {entity-name}-upload.controller.ts     # 上传接口 (如适用)
-│   └── {entity-name}-access.controller.ts     # 公开访问接口 (如适用)
+│   ├── {entity-name}-access.controller.ts     # 公开访问接口 (如适用)
+│   └── admin.controller.ts               # 管理员专用接口
 ├── services/                     # 业务逻辑服务
 │   └── {entity-name}.service.ts
+├── guards/                       # 权限守卫 (如适用)
+│   └── admin.guard.ts
 └── {module-name}.module.ts       # 模块定义
 ```
 
@@ -815,6 +822,7 @@ this.logger.debug(`缓存穿透防护触发: ${id}`);
 - **单个资源操作**: 使用单数形式（如 `/api/user/{id}`, `/api/album/{id}`, `/api/image/{id}`）
 - **集合资源操作**: 使用复数形式（如 `/api/users`, `/api/albums`, `/api/images`）
 - **当前用户操作**: 针对当前认证用户的操作使用单数形式（如 `/api/user/profile`）
+- **管理员接口**: 使用 `/admin/{resource}` 前缀，需要管理员权限
 
 #### 1.2 实际路由结构
 
@@ -828,6 +836,13 @@ this.logger.debug(`缓存穿透防护触发: ${id}`);
 **集合资源操作（复数形式）**:
 - `/api/albums` - GET（分页查询相册列表）
 - `/api/images` - GET（分页查询图片列表）
+
+**管理员专用接口**:
+- `/api/admin/users` - GET（分页获取用户列表）
+- `/api/admin/user/{id}` - GET（获取用户详细信息）
+- `/api/admin/user/{id}/status` - PUT（切换用户状态）
+- `/api/admin/user/{id}/reset-password` - PUT（重置用户密码）
+- `/api/admin/user/{id}/exists` - GET（检查用户是否存在）
 
 **公开访问接口（无需认证前缀）**:
 - `/i/{secureId}` - GET（图片公开访问）
@@ -897,7 +912,44 @@ async getCurrentUser(@CurrentUserId() userId: string): Promise<any> {
 }
 ```
 
-#### 3.2 公开接口规范
+#### 3.2 管理员授权规范
+
+管理员接口需要同时使用 TokenGuard 和 AdminGuard：
+
+```typescript
+@ApiTags('管理员用户管理')
+@Controller('admin/user')
+@UseGuards(TokenGuard, AdminGuard)
+@ApiBearerAuth('token')
+export class AdminController {
+  @Get()
+  @ApiOperation({ summary: '分页获取用户列表' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: 401, description: '认证失败或权限不足' })
+  async findUsersWithPagination(@Query() query: UserQueryDto) {
+    return this.userService.findUsersWithPagination(query);
+  }
+}
+```
+
+**AdminGuard 实现规范**:
+```typescript
+@Injectable()
+export class AdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const user = request.user;
+
+    if (!user || user.userType !== 1) {
+      throw new UnauthorizedException('需要管理员权限');
+    }
+
+    return true;
+  }
+}
+```
+
+#### 3.3 公开接口规范
 
 公开访问的图片接口不需要认证，但需要特殊的安全设计：
 

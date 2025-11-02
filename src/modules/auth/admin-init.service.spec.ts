@@ -93,10 +93,9 @@ describe('AdminInitService', () => {
 
     it('should create admin user with valid password', async () => {
       mockUserRepository.findByUserName.mockResolvedValue(null);
-      mockConfigService.get.mockReturnValue('Admin123456!');
       mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'ADMIN_PASSWORD') return 'Admin123456!';
         if (key === 'auth.security.bcryptRounds') return 12;
-        if (key === 'adminPassword') return 'Admin123456!';
         return null;
       });
 
@@ -126,9 +125,8 @@ describe('AdminInitService', () => {
 
     it('should use default bcrypt rounds if not configured', async () => {
       mockUserRepository.findByUserName.mockResolvedValue(null);
-      mockConfigService.get.mockReturnValue('Admin123456!');
       mockConfigService.get.mockImplementation((key: string) => {
-        if (key === 'adminPassword') return 'Admin123456!';
+        if (key === 'ADMIN_PASSWORD') return 'Admin123456!';
         return null; // auth.security.bcryptRounds not configured
       });
 

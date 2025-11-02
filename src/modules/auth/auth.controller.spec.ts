@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -24,6 +25,7 @@ describe('AuthController', () => {
     login: jest.fn(),
     validateToken: jest.fn(),
     logout: jest.fn(),
+    changePassword: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -151,6 +153,59 @@ describe('AuthController', () => {
       const result = await controller.getProfile(mockRequest);
 
       expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should successfully change password', async () => {
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      const mockUser = {
+        userId: '1234567890123456789',
+        userName: 'testuser',
+        userType: 10,
+      };
+
+      const mockRequest = {
+        user: mockUser,
+      } as any;
+
+      const expectedResponse = {
+        success: true,
+        message: '密码修改成功'
+      };
+
+      mockAuthService.changePassword.mockResolvedValue(expectedResponse);
+
+      const result = await controller.changePassword(mockRequest, changePasswordDto);
+
+      expect(result).toEqual(expectedResponse);
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(mockUser.userId, changePasswordDto);
+    });
+
+    it('should handle service errors', async () => {
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'WrongPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      const mockUser = {
+        userId: '1234567890123456789',
+        userName: 'testuser',
+        userType: 10,
+      };
+
+      const mockRequest = {
+        user: mockUser,
+      } as any;
+
+      mockAuthService.changePassword.mockRejectedValue(new Error('旧密码不正确'));
+
+      await expect(controller.changePassword(mockRequest, changePasswordDto)).rejects.toThrow('旧密码不正确');
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(mockUser.userId, changePasswordDto);
     });
   });
 });

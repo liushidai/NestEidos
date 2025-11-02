@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CacheService } from '@/cache';
 import { UserRepository } from '../user/repositories/user.repository';
 import * as bcrypt from 'bcrypt';
@@ -30,6 +31,8 @@ describe('AuthService', () => {
   const mockUserRepository = {
     findByUserName: jest.fn(),
     create: jest.fn(),
+    findById: jest.fn(),
+    update: jest.fn(),
   };
 
   const mockCacheService = {
@@ -418,6 +421,132 @@ describe('AuthService', () => {
       // 应该使用默认值 10
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.passWord, 10);
       expect(mockUserRepository.create).toHaveBeenCalledWith(expectedUser);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should successfully change password with correct old password', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never); // 第二次比较返回false，表示新密码与旧密码不同
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
+      mockUserRepository.update.mockResolvedValue(mockUser);
+
+      const result = await service.changePassword(userId, changePasswordDto);
+
+      expect(result).toEqual({
+        success: true,
+        message: '密码修改成功'
+      });
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
+      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.newPassword, mockUser.passWord);
+      expect(bcrypt.hash).toHaveBeenCalledWith(changePasswordDto.newPassword, 10);
+      expect(mockUserRepository.update).toHaveBeenCalledWith(userId, { passWord: 'newhashedpassword' });
+    });
+
+    it('should throw UnauthorizedException if user does not exist', async () => {
+      const userId = 'nonexistentuser';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+    });
+
+    it('should throw UnauthorizedException if user status is not 1', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      const inactiveUser = { ...mockUser, userStatus: 0 };
+      mockUserRepository.findById.mockResolvedValue(inactiveUser);
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+    });
+
+    it('should throw UnauthorizedException if old password is incorrect', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'WrongPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
+    });
+
+    it('should throw ConflictException if new password is same as old password', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'Password123!',
+        newPassword: 'Password123!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(ConflictException);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
+      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.newPassword, mockUser.passWord);
+    });
+
+    it('should use configured bcrypt rounds for password hashing', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
+      mockUserRepository.update.mockResolvedValue(mockUser);
+
+      // 配置bcrypt轮数
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'auth.security.bcryptRounds') return 14;
+        return null;
+      });
+
+      await service.changePassword(userId, changePasswordDto);
+
+      expect(bcrypt.hash).toHaveBeenCalledWith(changePasswordDto.newPassword, 14);
+    });
+
+    it('should handle database errors during update', async () => {
+      const userId = '1234567890123456789';
+      const changePasswordDto: ChangePasswordDto = {
+        oldPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+      };
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
+      mockUserRepository.update.mockRejectedValue(new Error('Database update failed'));
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow('Database update failed');
     });
   });
 });
