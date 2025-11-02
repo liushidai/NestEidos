@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
@@ -50,7 +51,6 @@ describe('AuthController', () => {
     const registerDto: RegisterUserDto = {
       userName: 'testuser',
       passWord: 'Password123!',
-      userType: 10,
     };
 
     it('should register a new user successfully', async () => {
@@ -76,6 +76,18 @@ describe('AuthController', () => {
       mockAuthService.register.mockRejectedValue(error);
 
       await expect(controller.register(registerDto)).rejects.toThrow(error);
+    });
+
+    it('should throw ConflictException when username is admin', async () => {
+      const adminRegisterDto: RegisterUserDto = {
+        userName: 'admin',
+        passWord: 'Password123!',
+      };
+
+      const error = new ConflictException('用户名 admin 不允许注册');
+      mockAuthService.register.mockRejectedValue(error);
+
+      await expect(controller.register(adminRegisterDto)).rejects.toThrow(error);
     });
   });
 

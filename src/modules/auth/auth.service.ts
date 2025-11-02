@@ -23,6 +23,11 @@ export class AuthService {
    * 用户注册
    */
   async register(registerUserDto: RegisterUserDto): Promise<User> {
+    // 检查用户名是否为 admin（不区分大小写）
+    if (registerUserDto.userName.toLowerCase() === 'admin') {
+      throw new ConflictException('用户名 admin 不允许注册');
+    }
+
     // 检查用户名是否已存在
     const existingUser = await this.userRepository.findByUserName(registerUserDto.userName);
 
@@ -34,10 +39,11 @@ export class AuthService {
     const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
     const hashedPassword = await bcrypt.hash(registerUserDto.passWord, bcryptRounds);
 
-    // 创建用户
+    // 创建用户，设置默认 userType 为 10（普通用户）
     const userData = {
       ...registerUserDto,
       passWord: hashedPassword,
+      userType: 10,
     };
 
     return this.userRepository.create(userData);

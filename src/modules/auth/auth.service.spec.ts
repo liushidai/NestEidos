@@ -8,11 +8,12 @@ import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
 import { CacheService } from '@/cache';
+import { UserRepository } from '../user/repositories/user.repository';
 import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let userRepository: jest.Mocked<Repository<User>>;
+  let userRepository: jest.Mocked<UserRepository>;
   let cacheService: jest.Mocked<CacheService>;
   let configService: jest.Mocked<ConfigService>;
 
@@ -26,10 +27,9 @@ describe('AuthService', () => {
     updatedAt: new Date(),
   } as User;
 
-  const mockRepository = {
-    findOneBy: jest.fn(),
+  const mockUserRepository = {
+    findByUserName: jest.fn(),
     create: jest.fn(),
-    save: jest.fn(),
   };
 
   const mockCacheService = {
@@ -49,8 +49,8 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         {
-          provide: getRepositoryToken(User),
-          useValue: mockRepository,
+          provide: UserRepository,
+          useValue: mockUserRepository,
         },
         {
           provide: CacheService,
@@ -60,11 +60,17 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: 'TTL_CONFIGS',
+          useValue: {
+            AUTH_TOKEN: { value: 150, unit: 'days' }, // 实际默认值是150天
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userRepository = module.get(getRepositoryToken(User)) as jest.Mocked<Repository<User>>;
+    userRepository = module.get(UserRepository) as jest.Mocked<UserRepository>;
     cacheService = module.get(CacheService) as jest.Mocked<CacheService>;
     configService = module.get(ConfigService) as jest.Mocked<ConfigService>;
 
@@ -90,28 +96,49 @@ describe('AuthService', () => {
     const registerDto: RegisterUserDto = {
       userName: 'testuser',
       passWord: 'Password123!',
-      userType: 10,
     };
 
     it('should successfully register a new user', async () => {
-      mockRepository.findOneBy.mockResolvedValue(null);
+      mockUserRepository.findByUserName.mockResolvedValue(null);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedpassword' as never);
-      mockRepository.create.mockReturnValue({ ...registerDto, passWord: 'hashedpassword' } as User);
-      mockRepository.save.mockResolvedValue(mockUser);
+      const expectedUser = { ...registerDto, passWord: 'hashedpassword', userType: 10 };
+      const createdUser = { ...expectedUser, id: mockUser.id, userStatus: mockUser.userStatus, createdAt: mockUser.createdAt, updatedAt: mockUser.updatedAt };
+      mockUserRepository.create.mockReturnValue(createdUser as User);
 
       const result = await service.register(registerDto);
 
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
-        userName: registerDto.userName,
-      });
+      expect(mockUserRepository.findByUserName).toHaveBeenCalledWith(registerDto.userName);
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.passWord, 10);
-      expect(result).toEqual(mockUser);
+      expect(mockUserRepository.create).toHaveBeenCalledWith(expectedUser);
+      expect(result).toEqual(createdUser);
     });
 
     it('should throw ConflictException if username already exists', async () => {
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
 
       await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should throw ConflictException if username is admin', async () => {
+      const adminRegisterDto: RegisterUserDto = {
+        userName: 'admin',
+        passWord: 'Password123!',
+      };
+
+      await expect(service.register(adminRegisterDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should throw ConflictException if username is ADMIN (uppercase)', async () => {
+      const adminRegisterDto: RegisterUserDto = {
+        userName: 'ADMIN',
+        passWord: 'Password123!',
+      };
+
+      await expect(service.register(adminRegisterDto)).rejects.toThrow(
         ConflictException,
       );
     });
@@ -124,20 +151,20 @@ describe('AuthService', () => {
     };
 
     it('should successfully login and return token', async () => {
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
       expect(result).toHaveProperty('token');
-      expect(result).toHaveProperty('expires_in', 3600);
+      expect(result).toHaveProperty('expires_in', 12960000); // 150天 = 12960000秒
       expect(typeof result.token).toBe('string');
       expect(result.token).toHaveLength(64); // 32 bytes * 2 (hex) = 64 chars
     });
 
     it('should throw UnauthorizedException if user does not exist', async () => {
-      mockRepository.findOneBy.mockResolvedValue(null);
+      mockUserRepository.findByUserName.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
@@ -146,7 +173,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException if user is banned', async () => {
       const bannedUser = { ...mockUser, userStatus: 2 };
-      mockRepository.findOneBy.mockResolvedValue(bannedUser);
+      mockUserRepository.findByUserName.mockResolvedValue(bannedUser);
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
@@ -154,7 +181,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.login(loginDto)).rejects.toThrow(
@@ -216,7 +243,7 @@ describe('AuthService', () => {
         passWord: 'Password123!',
       };
 
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       mockCacheService.set.mockResolvedValue(undefined);
 
@@ -243,7 +270,7 @@ describe('AuthService', () => {
         passWord: 'Password123!',
       };
 
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       mockCacheService.set.mockResolvedValue(undefined);
 
@@ -259,7 +286,7 @@ describe('AuthService', () => {
       // 设置自定义配置
       mockConfigService.get.mockImplementation((key: string) => {
         const defaults: Record<string, any> = {
-          'auth.token.expiresIn': 7200, // 2小时
+          'auth.token.expiresIn': 2, // 2小时
           'auth.token.bytesLength': 32,
           'auth.redis.keyPrefix': 'auth:token:',
           'auth.security.bcryptRounds': 10,
@@ -272,32 +299,21 @@ describe('AuthService', () => {
         passWord: 'Password123!',
       };
 
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       mockCacheService.set.mockResolvedValue(undefined);
 
       const result = await service.login(loginDto);
 
-      expect(result.expires_in).toBe(7200);
+      expect(result.expires_in).toBe(7200); // 2小时 = 7200秒
       expect(mockCacheService.set).toHaveBeenCalledWith(
         expect.stringContaining('auth:token:'),
         expect.any(Object),
-        '7200s',
+        { value: 2, unit: 'hours' },
       );
     });
 
-    it('should use custom Redis key prefix from config', async () => {
-      // 设置自定义配置
-      mockConfigService.get.mockImplementation((key: string) => {
-        const defaults: Record<string, any> = {
-          'auth.token.expiresIn': 3600,
-          'auth.token.bytesLength': 32,
-          'auth.redis.keyPrefix': 'custom:prefix:',
-          'auth.security.bcryptRounds': 10,
-        };
-        return defaults[key];
-      });
-
+    it('should use default Redis key prefix', async () => {
       const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
       const userData = {
         userId: '1234567890123456789',
@@ -309,7 +325,7 @@ describe('AuthService', () => {
 
       await service.validateToken(token);
 
-      expect(mockCacheService.get).toHaveBeenCalledWith(`custom:prefix:${token}`);
+      expect(mockCacheService.get).toHaveBeenCalledWith(`auth:token:${token}`);
     });
 
     it('should use custom bcrypt rounds from config', async () => {
@@ -327,12 +343,11 @@ describe('AuthService', () => {
       const registerDto: RegisterUserDto = {
         userName: 'testuser',
         passWord: 'Password123!',
-        userType: 10,
       };
 
-      mockRepository.findOneBy.mockResolvedValue(null);
-      mockRepository.create.mockReturnValue({ ...registerDto, passWord: 'hashedpassword' } as User);
-      mockRepository.save.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue({ ...registerDto, passWord: 'hashedpassword' } as User);
+      // UserRepository.create handles the save operation
 
       await service.register(registerDto);
 
@@ -347,7 +362,7 @@ describe('AuthService', () => {
         passWord: 'Password123!',
       };
 
-      mockRepository.findOneBy.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       mockCacheService.set.mockRejectedValue(new Error('Redis connection failed'));
 
@@ -391,17 +406,18 @@ describe('AuthService', () => {
       const registerDto: RegisterUserDto = {
         userName: 'testuser',
         passWord: 'Password123!',
-        userType: 10,
       };
 
-      mockRepository.findOneBy.mockResolvedValue(null);
-      mockRepository.create.mockReturnValue({ ...registerDto, passWord: 'hashedpassword' } as User);
-      mockRepository.save.mockResolvedValue(mockUser);
+      mockUserRepository.findByUserName.mockResolvedValue(null);
+      const expectedUser = { ...registerDto, passWord: 'hashedpassword', userType: 10 };
+      const createdUser = { ...expectedUser, id: mockUser.id, userStatus: mockUser.userStatus, createdAt: mockUser.createdAt, updatedAt: mockUser.updatedAt };
+      mockUserRepository.create.mockReturnValue(createdUser as User);
 
       await service.register(registerDto);
 
       // 应该使用默认值 10
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.passWord, 10);
+      expect(mockUserRepository.create).toHaveBeenCalledWith(expectedUser);
     });
   });
 });

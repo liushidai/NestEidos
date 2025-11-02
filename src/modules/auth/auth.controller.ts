@@ -17,7 +17,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: '用户注册' })
+  @ApiOperation({ summary: '用户注册（默认用户类型为10-普通用户）' })
   @ApiBody({ type: RegisterUserDto })
   @ApiResponse({
     status: 201,

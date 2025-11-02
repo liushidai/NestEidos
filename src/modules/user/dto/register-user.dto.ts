@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsIn, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsStrongPassword } from '../../../decorators/strong-password.decorator';
 
@@ -28,14 +28,4 @@ export class RegisterUserDto {
   @IsNotEmpty({ message: '密码不能为空' })
   @IsStrongPassword({ message: '密码必须至少8位，包含大写字母、小写字母、数字和特殊字符(@$!%*?&)' })
   passWord: string;
-
-  @ApiProperty({
-    description: '用户类型：1-管理员，10-普通用户',
-    example: 10,
-    required: true,
-    type: Number,
-    enum: [1, 10],
-  })
-  @IsIn([1, 10], { message: '用户类型必须是1(管理员)或10(普通用户)' })
-  userType: number;
 }
