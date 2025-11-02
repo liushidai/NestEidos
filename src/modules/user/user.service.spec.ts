@@ -137,20 +137,20 @@ describe('UserService', () => {
   describe('toggleUserStatus', () => {
     it('should toggle user status successfully', async () => {
       const updatedUser = mockUser as User;
-      updatedUser.userStatus = 0;
+      updatedUser.userStatus = 2;
       userRepository.toggleUserStatus.mockResolvedValue(updatedUser);
 
-      const toggleDto: ToggleUserStatusDto = { userStatus: 0 };
+      const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
       const result = await service.toggleUserStatus('user-id', toggleDto);
 
-      expect(userRepository.toggleUserStatus).toHaveBeenCalledWith('user-id', 0);
-      expect(result.userStatus).toBe(0);
+      expect(userRepository.toggleUserStatus).toHaveBeenCalledWith('user-id', 2);
+      expect(result.userStatus).toBe(2);
     });
 
     it('should throw NotFoundException when user not found', async () => {
       userRepository.toggleUserStatus.mockRejectedValue(new Error('用户不存在'));
 
-      const toggleDto: ToggleUserStatusDto = { userStatus: 0 };
+      const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
       await expect(service.toggleUserStatus('nonexistent', toggleDto)).rejects.toThrow('用户不存在');
     });
   });
@@ -205,25 +205,25 @@ describe('UserService', () => {
 
   describe('userExists', () => {
     it('should return true when user exists', async () => {
-      userRepository.findById.mockResolvedValue(mockUser);
+      userRepository.exists.mockResolvedValue(true);
 
       const result = await service.userExists('user-id');
 
-      expect(userRepository.findById).toHaveBeenCalledWith('user-id');
+      expect(userRepository.exists).toHaveBeenCalledWith('user-id');
       expect(result).toBe(true);
     });
 
     it('should return false when user does not exist', async () => {
-      userRepository.findById.mockResolvedValue(null);
+      userRepository.exists.mockResolvedValue(false);
 
       const result = await service.userExists('nonexistent');
 
-      expect(userRepository.findById).toHaveBeenCalledWith('nonexistent');
+      expect(userRepository.exists).toHaveBeenCalledWith('nonexistent');
       expect(result).toBe(false);
     });
 
     it('should return false when error occurs', async () => {
-      userRepository.findById.mockRejectedValue(new Error('Database error'));
+      userRepository.exists.mockRejectedValue(new Error('Database error'));
 
       const result = await service.userExists('user-id');
 

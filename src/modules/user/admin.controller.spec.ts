@@ -82,55 +82,6 @@ describe('AdminController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('findUsersWithPagination', () => {
-    it('should return paginated users', async () => {
-      const query: UserQueryDto = {
-        page: 1,
-        limit: 10,
-        userName: 'test',
-        userType: 10,
-        userStatus: 1,
-      };
-
-      const expectedResult = {
-        users: [UserProfileDto.fromUser(mockRegularUser)],
-        total: 1,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-      };
-
-      mockUserService.findUsersWithPagination.mockResolvedValue(expectedResult);
-
-      const result = await controller.findUsersWithPagination(query);
-
-      expect(userService.findUsersWithPagination).toHaveBeenCalledWith(query);
-      expect(result).toEqual(expectedResult);
-    });
-
-    it('should handle empty search parameters', async () => {
-      const query: UserQueryDto = {
-        page: 1,
-        limit: 10,
-      };
-
-      const expectedResult = {
-        users: [],
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      };
-
-      mockUserService.findUsersWithPagination.mockResolvedValue(expectedResult);
-
-      const result = await controller.findUsersWithPagination(query);
-
-      expect(userService.findUsersWithPagination).toHaveBeenCalledWith(query);
-      expect(result).toEqual(expectedResult);
-    });
-  });
-
   describe('getUserDetailById', () => {
     it('should return user detail', async () => {
       const userId = 'user-id';
@@ -157,8 +108,8 @@ describe('AdminController', () => {
   describe('toggleUserStatus', () => {
     it('should toggle user status successfully', async () => {
       const userId = 'user-id';
-      const toggleDto: ToggleUserStatusDto = { userStatus: 0 };
-      const expectedUser = UserProfileDto.fromUser({ ...mockRegularUser, userStatus: 0 });
+      const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
+      const expectedUser = UserProfileDto.fromUser({ ...mockRegularUser, userStatus: 2 });
 
       const mockRequest = {
         user: mockAdminUser,
@@ -173,21 +124,21 @@ describe('AdminController', () => {
     });
 
     it('should prevent admin from toggling their own status', async () => {
-      const toggleDto: ToggleUserStatusDto = { userStatus: 0 };
+      const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
 
       const mockRequest = {
         user: { ...mockAdminUser, userId: 'user-id' },
       } as any;
 
       await expect(controller.toggleUserStatus('user-id', toggleDto, mockRequest))
-        .rejects.toThrow(NotFoundException);
+        .rejects.toThrow(BadRequestException);
 
       expect(userService.toggleUserStatus).not.toHaveBeenCalled();
     });
 
     it('should handle not found user', async () => {
       const userId = 'nonexistent-id';
-      const toggleDto: ToggleUserStatusDto = { userStatus: 0 };
+      const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
 
       const mockRequest = {
         user: mockAdminUser,
@@ -215,7 +166,11 @@ describe('AdminController', () => {
 
       mockUserService.resetUserPassword.mockResolvedValue(expectedResult);
 
-      const result = await controller.resetUserPassword(userId, resetDto);
+      const mockRequest = {
+        user: mockAdminUser,
+      } as any;
+
+      const result = await controller.resetUserPassword(userId, resetDto, mockRequest);
 
       expect(userService.resetUserPassword).toHaveBeenCalledWith(userId, resetDto);
       expect(result).toEqual(expectedResult);
@@ -235,7 +190,11 @@ describe('AdminController', () => {
 
       mockUserService.resetUserPassword.mockResolvedValue(expectedResult);
 
-      const result = await controller.resetUserPassword(userId, resetDto);
+      const mockRequest = {
+        user: mockAdminUser,
+      } as any;
+
+      const result = await controller.resetUserPassword(userId, resetDto, mockRequest);
 
       expect(userService.resetUserPassword).toHaveBeenCalledWith(userId, resetDto);
       expect(result).toEqual(expectedResult);
@@ -249,7 +208,11 @@ describe('AdminController', () => {
 
       mockUserService.resetUserPassword.mockRejectedValue(new NotFoundException('用户不存在'));
 
-      await expect(controller.resetUserPassword(userId, resetDto))
+      const mockRequest = {
+        user: mockAdminUser,
+      } as any;
+
+      await expect(controller.resetUserPassword(userId, resetDto, mockRequest))
         .rejects.toThrow(NotFoundException);
     });
 
@@ -261,7 +224,11 @@ describe('AdminController', () => {
         new BadRequestException('必须提供新密码或使用默认密码选项')
       );
 
-      await expect(controller.resetUserPassword(userId, resetDto))
+      const mockRequest = {
+        user: mockAdminUser,
+      } as any;
+
+      await expect(controller.resetUserPassword(userId, resetDto, mockRequest))
         .rejects.toThrow(BadRequestException);
     });
   });

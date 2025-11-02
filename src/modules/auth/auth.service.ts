@@ -69,8 +69,14 @@ export class AuthService {
     }
 
     // 检查用户状态
+    if (user.userStatus === 2) {
+      this.logger.warn(`被封锁的用户尝试登录: ${loginUserDto.userName}`);
+      throw new UnauthorizedException('账户已被封锁，请联系管理员');
+    }
+
     if (user.userStatus !== 1) {
-      throw new UnauthorizedException('用户名或密码错误');
+      this.logger.warn(`用户状态异常: ${loginUserDto.userName}, 状态: ${user.userStatus}`);
+      throw new UnauthorizedException('账户状态异常，请联系管理员');
     }
 
     // 验证密码
@@ -163,6 +169,13 @@ export class AuthService {
    */
   async findByUserName(userName: string): Promise<User | null> {
     return this.userRepository.findByUserName(userName);
+  }
+
+  /**
+   * 根据用户ID查找用户
+   */
+  async getUserById(userId: string): Promise<User | null> {
+    return this.userRepository.findById(userId);
   }
 
   /**

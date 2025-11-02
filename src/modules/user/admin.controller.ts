@@ -91,7 +91,7 @@ export class AdminController {
         id: '1234567890123456789',
         userName: 'testuser',
         userType: 10,
-        userStatus: 0,
+        userStatus: 2,
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       },
@@ -110,9 +110,9 @@ export class AdminController {
     @Body() toggleUserStatusDto: ToggleUserStatusDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    // 防止管理员禁用自己
+    // 防止管理员修改自己的状态
     if (req.user && req.user.userId === id) {
-      throw new NotFoundException('不能修改自己的状态');
+      throw new BadRequestException('不能修改自己的账户状态');
     }
 
     return this.userService.toggleUserStatus(id, toggleUserStatusDto);
@@ -164,7 +164,13 @@ export class AdminController {
   async resetUserPassword(
     @Param('id', ParseSnowflakeIdPipe) id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
+    @Request() req: AuthenticatedRequest,
   ) {
+    // 防止管理员重置自己的密码
+    if (req.user && req.user.userId === id) {
+      throw new BadRequestException('不能重置自己的密码，请使用修改密码功能');
+    }
+
     return this.userService.resetUserPassword(id, resetPasswordDto);
   }
 

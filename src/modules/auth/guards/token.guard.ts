@@ -1,9 +1,11 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
 
 @Injectable()
 export class TokenGuard implements CanActivate {
+  private readonly logger = new Logger(TokenGuard.name);
+
   constructor(private readonly authService: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -19,6 +21,33 @@ export class TokenGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('认证令牌无效或已过期');
     }
+
+    // 检查用户的最新状态
+    const currentUser = await this.authService.getUserById(user.userId);
+    if (!currentUser) {
+      this.logger.warn(`Token 对应的用户不存在: ${user.userName}, 注销 token`);
+      await this.authService.logout(token);
+      throw new UnauthorizedException('用户不存在，认证令牌已失效');
+    }
+
+    // 检查用户状态
+    if (currentUser.userStatus === 2) {
+      this.logger.warn(`被封锁的用户尝试访问: ${currentUser.userName}, 注销 token`);
+      await this.authService.logout(token);
+      throw new UnauthorizedException('账户已被封锁，请联系管理员');
+    }
+
+    if (currentUser.userStatus !== 1) {
+      this.logger.warn(`用户状态异常: ${currentUser.userName}, 状态: ${currentUser.userStatus}, 注销 token`);
+      await this.authService.logout(token);
+      throw new UnauthorizedException('账户状态异常，请联系管理员');
+    }
+
+    // 更新缓存的用户信息（以防有其他信息变更）
+    Object.assign(user, {
+      userStatus: currentUser.userStatus,
+      updatedAt: currentUser.updatedAt
+    });
 
     // 将用户信息挂载到 request 对象上
     (request as any).user = user;

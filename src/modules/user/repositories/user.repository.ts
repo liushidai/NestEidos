@@ -104,9 +104,6 @@ export class UserRepository {
    */
   async update(id: string, updateData: Partial<User>): Promise<User> {
     try {
-      // 先获取原始用户数据用于缓存清理
-      const originalUser = await this.findById(id);
-
       // 更新用户
       await this.userRepository.update(id, updateData);
 

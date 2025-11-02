@@ -32,7 +32,7 @@ export class AdminUsersController {
   @ApiQuery({ name: 'limit', description: '每页数量', required: false, type: Number, example: 10 })
   @ApiQuery({ name: 'userName', description: '用户名模糊搜索', required: false, type: String, example: 'admin' })
   @ApiQuery({ name: 'userType', description: '用户类型筛选', required: false, type: Number, enum: [1, 10], example: 10 })
-  @ApiQuery({ name: 'userStatus', description: '用户状态筛选', required: false, type: Number, enum: [0, 1], example: 1 })
+  @ApiQuery({ name: 'userStatus', description: '用户状态筛选', required: false, type: Number, enum: [1, 2], example: 1 })
   @ApiResponse({
     status: 200,
     description: '获取成功',

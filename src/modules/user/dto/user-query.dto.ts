@@ -59,10 +59,11 @@ export class UserQueryDto {
     example: 1,
     required: false,
     type: Number,
-    enum: [0, 1],
+    enum: [1, 2],
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: '用户状态必须是整数' })
+  @IsIn([1, 2], { message: '用户状态只能是 1（正常）或 2（封锁）' })
   userStatus?: number;
 }

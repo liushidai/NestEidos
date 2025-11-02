@@ -178,9 +178,9 @@ describe('AuthService', () => {
       const bannedUser = { ...mockUser, userStatus: 2 };
       mockUserRepository.findByUserName.mockResolvedValue(bannedUser);
 
-      await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      const error = await service.login(loginDto).catch(err => err);
+      expect(error).toBeInstanceOf(UnauthorizedException);
+      expect(error.message).toBe('账户已被封锁，请联系管理员');
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {
@@ -471,7 +471,7 @@ describe('AuthService', () => {
         newPassword: 'NewPassword456!',
       };
 
-      const inactiveUser = { ...mockUser, userStatus: 0 };
+      const inactiveUser = { ...mockUser, userStatus: 2 };
       mockUserRepository.findById.mockResolvedValue(inactiveUser);
 
       await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
@@ -547,6 +547,28 @@ describe('AuthService', () => {
       mockUserRepository.update.mockRejectedValue(new Error('Database update failed'));
 
       await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow('Database update failed');
+    });
+  });
+
+  describe('getUserById', () => {
+    it('should return user when found', async () => {
+      const userId = '1234567890123456789';
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+
+      const result = await service.getUserById(userId);
+
+      expect(result).toBe(mockUser);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+    });
+
+    it('should return null when user not found', async () => {
+      const userId = 'nonexistent';
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      const result = await service.getUserById(userId);
+
+      expect(result).toBeNull();
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
     });
   });
 });
