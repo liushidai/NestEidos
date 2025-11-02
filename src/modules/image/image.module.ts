@@ -7,6 +7,7 @@ import { ImageRepository } from './repositories/image.repository';
 import { ProtectedImageController } from './protected-image.controller';
 import { ImagesController } from './images.controller';
 import { ImageUploadController } from './image-upload.controller';
+import { ImageAccessController } from './image-access.controller';
 import { AuthModule } from '../auth/auth.module';
 import { StorageService } from '../../services/storage.service';
 import { ImageConversionService } from '../../services/image-conversion.service';
@@ -21,7 +22,7 @@ import { CacheModule } from '@/cache';
     ConfigModule,
     CacheModule,
   ],
-  controllers: [ProtectedImageController, ImagesController, ImageUploadController],
+  controllers: [ProtectedImageController, ImagesController, ImageUploadController, ImageAccessController],
   providers: [
     ImageService,
     ImageRepository,

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
@@ -60,8 +60,10 @@ async function bootstrap() {
       }
     }
 
-    // Set global API prefix
-    app.setGlobalPrefix('api');
+    // Set global API prefix, but exclude image access routes
+    app.setGlobalPrefix('api', {
+      exclude: [{ path: 'i/*', method: RequestMethod.GET }],
+    });
 
     // Enable validation pipe
     app.useGlobalPipes(new ValidationPipe({

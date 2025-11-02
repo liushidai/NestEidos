@@ -237,6 +237,20 @@ export class ImageService {
   /**
    * 根据ID和用户ID查找单张图片
    */
+  /**
+   * 根据 ID 查找图片（公开访问用，不验证用户权限）
+   */
+  async findById(id: string) {
+    const image = await this.imageRepository.findOne({
+      where: { id },
+    });
+
+    return image;
+  }
+
+  /**
+   * 根据 ID 查找图片并验证用户权限
+   */
   async findByIdAndUserId(id: string, userId: string) {
     const image = await this.imageRepository.findOne({
       where: { id, userId },
