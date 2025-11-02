@@ -23,7 +23,7 @@ export class AuthService {
    * 用户注册
    */
   async register(registerUserDto: RegisterUserDto): Promise<User> {
-    // 检查用户名是否为 admin（不区分大小写）
+    // 检查用户名是否为 admin（不区分大小写），不允许通过注册接口创建
     if (registerUserDto.userName.toLowerCase() === 'admin') {
       throw new ConflictException('用户名 admin 不允许注册');
     }
