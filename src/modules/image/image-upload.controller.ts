@@ -51,7 +51,7 @@ export class ImageUploadController {
         id: { type: 'string', example: '1234567890123456789', description: '图片ID' },
         userId: { type: 'string', example: '1234567890123456788', description: '用户ID' },
         albumId: { type: 'string', example: '0', description: '相册ID' },
-        originalName: { type: 'string', example: 'test1.jpg', description: '原始文件名' },
+        originalName: { type: 'string', example: '测试图片.jpg', description: '原始文件名（支持中文，超长会自动截断）' },
         title: { type: 'string', example: '一只猫', description: '图片标题' },
         imageHash: { type: 'string', example: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456', description: '图片哈希' },
         imageSize: { type: 'number', example: 1024000, description: '文件大小（字节）' },
@@ -95,6 +95,11 @@ export class ImageUploadController {
     @Request() req: AuthenticatedRequest,
   ): Promise<Image> {
     const userId = req.user.userId;
+
+    // 处理文件名：修复中文编码并截断超长部分
+    if (file && file.originalname) {
+      file.originalname = ImageUploadInterceptor.processFileName(file.originalname);
+    }
 
     // 将 UploadImageDto 转换为 CreateImageDto 以兼容服务层
     const createImageDto: CreateImageDto = {

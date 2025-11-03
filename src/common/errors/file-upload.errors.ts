@@ -76,6 +76,7 @@ export class MissingExtensionError extends FileValidationError {
   }
 }
 
+
 /**
  * 文件内容为空错误
  */

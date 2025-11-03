@@ -13,6 +13,12 @@ const AppDataSource = new DataSource({
   username: configService.get<string>('DB_USERNAME', 'postgres'),
   password: configService.get<string>('DB_PASSWORD', 'your_password'),
   database: configService.get<string>('DB_DATABASE', 'nest_eidos'),
+  // 额外的连接选项，确保正确的编码处理
+  extra: {
+    connectionLimit: 10,
+    // 在连接初始化时设置编码，确保中文文件名正确存储
+    initSql: "SET client_encoding = 'UTF8';"
+  },
   // 是否自动同步实体和数据库表结构（生产环境通常设为 false）
   synchronize: true,
   // 告诉 TypeORM：
