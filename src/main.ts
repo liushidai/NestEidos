@@ -62,7 +62,7 @@ async function bootstrap() {
 
     // Set global API prefix, but exclude image access routes
     app.setGlobalPrefix('api', {
-      exclude: [{ path: 'i/*', method: RequestMethod.GET }],
+      exclude: [{ path: 'i/*path', method: RequestMethod.GET }],
     });
 
     // Enable validation pipe

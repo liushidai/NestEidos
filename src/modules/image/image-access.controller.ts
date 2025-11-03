@@ -96,7 +96,7 @@ export class ImageAccessController {
     private readonly secureIdUtil: SecureIdUtil,
   ) {}
 
-  @Get('*')
+  @Get('*path')
   @ApiOperation({ summary: '获取图片（通用路由）' })
   @ApiParam({ name: 'path', description: '完整路径', example: 'I3v4yvfBs0D.webp' })
   @ApiResponse({ status: 200, description: '成功返回图片' })
