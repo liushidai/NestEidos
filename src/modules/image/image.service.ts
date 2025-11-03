@@ -164,6 +164,7 @@ export class ImageService {
         imageHeight: height,
         hasTransparency,
         isAnimated,
+        secureUrl,
         originalKey,
         jpegKey,
         webpKey,

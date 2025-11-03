@@ -75,6 +75,12 @@ export class ImageResponseDto {
   isAnimated: boolean;
 
   @ApiProperty({
+    description: '图片的安全 URL，通过id计算得出，防止被遍历',
+    example: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+  })
+  secureUrl: string;
+
+  @ApiProperty({
     description: '原始文件在对象存储中的路径',
     example: 'originals/abc123def456.jpg',
   })

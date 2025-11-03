@@ -43,6 +43,9 @@ export class Image {
   @Column({ name: 'is_animated', type: 'boolean', default: false })
   isAnimated: boolean;
 
+  @Column({ name: 'secure_url', type: 'varchar', length: 512 })
+  secureUrl: string;
+
   @Column({ name: 'original_key', type: 'varchar', length: 512 })
   originalKey: string;
 

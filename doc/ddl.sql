@@ -71,6 +71,7 @@ CREATE TABLE image (
     image_height INTEGER NOT NULL CHECK (image_height > 0),
     has_transparency BOOLEAN NOT NULL DEFAULT FALSE,
     is_animated       BOOLEAN NOT NULL DEFAULT FALSE,
+    secure_url VARCHAR(512) NOT NULL,
     original_key VARCHAR(512) NOT NULL,
     jpeg_key VARCHAR(512),
     webp_key VARCHAR(512),
@@ -109,6 +110,7 @@ COMMENT ON COLUMN image.image_width IS '原始图片宽度，单位：像素（�
 COMMENT ON COLUMN image.image_height IS '原始图片高度，单位：像素（仅适用于图片）';
 COMMENT ON COLUMN image.has_transparency IS '原图是否包含透明通道（Alpha 通道），例如 PNG/WebP/AVIF 中的透明区域';
 COMMENT ON COLUMN image.is_animated IS '原图是否为动画图像（多帧），例如 GIF、动画 WebP 或动画 AVIF';
+COMMENT ON COLUMN image.secure_url IS '图片的安全 URL，通过id计算得出，防止被遍历';
 COMMENT ON COLUMN image.original_key IS '原始文件在对象存储中的路径或键（key） 存储路径：originals/{url}';
 COMMENT ON COLUMN image.jpeg_key IS 'JPEG 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.jpg';
 COMMENT ON COLUMN image.webp_key IS 'WebP 格式文件在对象存储中的路径，若未生成则为 NULL 存储路径：processed/{url}.webp';

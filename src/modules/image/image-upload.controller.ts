@@ -64,6 +64,7 @@ export class ImageUploadController {
         avifKey: { type: 'string', example: 'processed/A1b2C3dE4f5G6h7I8j9K0l1M2n3O4P5.avif', description: 'AVIF存储路径' },
         hasTransparency: { type: 'boolean', example: false, description: '是否有透明通道' },
         isAnimated: { type: 'boolean', example: false, description: '是否为动画' },
+        secureUrl: { type: 'string', example: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456', description: '图片的安全URL' },
         hasJpeg: { type: 'boolean', example: true, description: '是否已生成JPEG' },
         hasWebp: { type: 'boolean', example: true, description: '是否已生成WebP' },
         hasAvif: { type: 'boolean', example: true, description: '是否已生成AVIF' },
