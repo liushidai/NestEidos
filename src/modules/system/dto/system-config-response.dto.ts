@@ -74,4 +74,20 @@ export class SystemConfigResponseDto {
   })
   @Allow()
   allowedExtensions: string[];
+
+  @ApiProperty({
+    description: '项目域名，用于生成完整URL和API文档链接',
+    example: 'http://localhost:3000',
+    type: 'string',
+  })
+  @Allow()
+  appDomain: string;
+
+  @ApiProperty({
+    description: '是否启用 Swagger API 文档',
+    example: true,
+    type: 'boolean',
+  })
+  @Allow()
+  enableSwagger: boolean;
 }

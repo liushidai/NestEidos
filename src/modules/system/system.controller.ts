@@ -19,7 +19,7 @@ export class SystemController {
   @Get('config')
   @ApiOperation({
     summary: '获取系统配置信息',
-    description: '获取当前系统的关键配置信息，包括注册开关、上传限制等，无需认证'
+    description: '获取当前系统的关键配置信息，包括注册开关、上传限制、Swagger状态等，无需认证'
   })
   @ApiResponse({
     status: 200,
@@ -35,6 +35,12 @@ export class SystemController {
     const maxFileSize = appConfig?.upload?.maxFileSize || 100 * 1024 * 1024; // 默认100MB
     const maxFileSizeMB = Math.round(maxFileSize / (1024 * 1024));
 
+    // 获取项目域名配置
+    const appDomain = this.configService.get<string>('APP_DOMAIN', 'http://localhost:3000');
+
+    // 获取 Swagger 文档开关状态
+    const enableSwagger = this.configService.get<boolean>('ENABLE_SWAGGER', true);
+
     // 获取支持的图片格式信息
     const supportedFormats = Object.keys(IMAGE_FORMATS);
     const allowedMimeTypes = [...ALLOWED_IMAGE_MIME_TYPES];
@@ -47,6 +53,8 @@ export class SystemController {
       supportedFormats,
       allowedMimeTypes,
       allowedExtensions,
+      appDomain,
+      enableSwagger,
     };
   }
 }

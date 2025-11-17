@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { ConfigValidationService } from './config/config-validation.service';
+import { ConfigService } from '@nestjs/config';
 import 'reflect-metadata';
 
 async function bootstrap() {
@@ -11,6 +12,9 @@ async function bootstrap() {
 
   try {
     const app = await NestFactory.create(AppModule);
+
+    // 获取配置服务
+    const configService = app.get(ConfigService);
 
     // 在应用启动后立即进行配置校验
     const configValidationService = app.get(ConfigValidationService);
@@ -78,12 +82,22 @@ async function bootstrap() {
     // Apply global exception filter
     app.useGlobalFilters(new HttpExceptionFilter());
 
-    AppModule.setupSwagger(app);
+    // 根据 ENABLE_SWAGGER 环境变量决定是否启用 Swagger 文档
+    const enableSwagger = configService.get<boolean>('ENABLE_SWAGGER', true);
+    if (enableSwagger) {
+      AppModule.setupSwagger(app);
+      logger.log('📚 Swagger API 文档已启用');
+    } else {
+      logger.log('📚 Swagger API 文档已禁用');
+    }
 
     const port = process.env.PORT ?? 3000;
     await app.listen(port);
     logger.log(`🚀 应用启动成功，监听端口: ${port}`);
-    logger.log(`📖 API 文档地址: http://localhost:${port}/api`);
+
+    if (enableSwagger) {
+      logger.log(`📖 API 文档地址: http://localhost:${port}/api`);
+    }
 
   } catch (error) {
     logger.error('❌ 应用启动过程中发生未预期的错误');

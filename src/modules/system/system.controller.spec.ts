@@ -31,6 +31,8 @@ describe('SystemController', () => {
     mockConfigService.get.mockImplementation((key: string) => {
       const defaults: Record<string, any> = {
         ENABLE_USER_REGISTRATION: true,
+        APP_DOMAIN: 'http://localhost:3000',
+        ENABLE_SWAGGER: true,
         app: {
           upload: {
             maxFileSize: 100 * 1024 * 1024, // 100MB
@@ -74,6 +76,8 @@ describe('SystemController', () => {
         supportedFormats: expectedSupportedFormats,
         allowedMimeTypes: expectedAllowedMimeTypes,
         allowedExtensions: expectedAllowedExtensions,
+        appDomain: 'http://localhost:3000',
+        enableSwagger: true,
       };
 
       expect(result).toEqual(expectedResult);
@@ -308,9 +312,11 @@ describe('SystemController', () => {
       await controller.getSystemConfig();
 
       // 验证ConfigService调用
-      expect(configService.get).toHaveBeenCalledTimes(2);
+      expect(configService.get).toHaveBeenCalledTimes(4);
       expect(configService.get).toHaveBeenNthCalledWith(1, 'ENABLE_USER_REGISTRATION', true);
       expect(configService.get).toHaveBeenNthCalledWith(2, 'app');
+      expect(configService.get).toHaveBeenNthCalledWith(3, 'APP_DOMAIN', 'http://localhost:3000');
+      expect(configService.get).toHaveBeenNthCalledWith(4, 'ENABLE_SWAGGER', true);
     });
 
     it('should return SystemConfigResponseDto type', async () => {
@@ -323,14 +329,74 @@ describe('SystemController', () => {
       expect(result).toHaveProperty('supportedFormats');
       expect(result).toHaveProperty('allowedMimeTypes');
       expect(result).toHaveProperty('allowedExtensions');
+      expect(result).toHaveProperty('appDomain');
+      expect(result).toHaveProperty('enableSwagger');
 
       // 验证数据类型
       expect(typeof result.enableUserRegistration).toBe('boolean');
       expect(typeof result.maxFileSize).toBe('number');
       expect(typeof result.maxFileSizeMB).toBe('number');
+      expect(typeof result.appDomain).toBe('string');
+      expect(typeof result.enableSwagger).toBe('boolean');
       expect(Array.isArray(result.supportedFormats)).toBe(true);
       expect(Array.isArray(result.allowedMimeTypes)).toBe(true);
       expect(Array.isArray(result.allowedExtensions)).toBe(true);
+    });
+
+    it('should return correct app domain configuration', async () => {
+      const result = await controller.getSystemConfig();
+
+      expect(configService.get).toHaveBeenCalledWith('APP_DOMAIN', 'http://localhost:3000');
+      expect(result.appDomain).toBe('http://localhost:3000');
+    });
+
+    it('should return correct swagger configuration', async () => {
+      const result = await controller.getSystemConfig();
+
+      expect(configService.get).toHaveBeenCalledWith('ENABLE_SWAGGER', true);
+      expect(result.enableSwagger).toBe(true);
+    });
+
+    it('should handle custom app domain configuration', async () => {
+      // 设置自定义域名
+      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'APP_DOMAIN') return 'https://api.example.com';
+        if (key === 'ENABLE_USER_REGISTRATION') return true;
+        if (key === 'ENABLE_SWAGGER') return true;
+        if (key === 'app') {
+          return {
+            upload: {
+              maxFileSize: 100 * 1024 * 1024,
+            },
+          };
+        }
+        return defaultValue;
+      });
+
+      const result = await controller.getSystemConfig();
+
+      expect(result.appDomain).toBe('https://api.example.com');
+    });
+
+    it('should handle disabled swagger configuration', async () => {
+      // 禁用 Swagger
+      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'ENABLE_SWAGGER') return false;
+        if (key === 'ENABLE_USER_REGISTRATION') return true;
+        if (key === 'APP_DOMAIN') return 'http://localhost:3000';
+        if (key === 'app') {
+          return {
+            upload: {
+              maxFileSize: 100 * 1024 * 1024,
+            },
+          };
+        }
+        return defaultValue;
+      });
+
+      const result = await controller.getSystemConfig();
+
+      expect(result.enableSwagger).toBe(false);
     });
   });
 
