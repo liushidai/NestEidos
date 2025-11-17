@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Get, UseGuards, Request, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, HttpCode, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
 import { LoginUserDto } from '../user/dto/login-user.dto';
@@ -15,7 +16,10 @@ interface AuthenticatedRequest extends ExpressRequest {
 @ApiTags('认证管理')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: '用户注册（默认用户类型为10-普通用户）' })
@@ -38,7 +42,17 @@ export class AuthController {
     status: 409,
     description: '用户名已存在',
   })
+  @ApiResponse({
+    status: 403,
+    description: '注册功能已关闭',
+  })
   async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
+    // 检查是否开启用户注册功能
+    const enableUserRegistration = this.configService.get<boolean>('ENABLE_USER_REGISTRATION', true);
+    if (!enableUserRegistration) {
+      throw new ForbiddenException('注册功能已关闭，请联系管理员创建账户');
+    }
+
     const user = await this.authService.register(registerUserDto);
     // 不返回密码
     const { passWord, ...userInfo } = user;

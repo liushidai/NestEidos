@@ -1,10 +1,21 @@
 import { registerAs } from '@nestjs/config';
 
 /**
+ * 应用配置接口定义
+ */
+export interface AppConfig {
+  port: number;
+  nodeEnv: string;
+  upload: {
+    maxFileSize: number;
+  };
+}
+
+/**
  * 应用配置
  * 包含文件上传相关配置
  */
-export default registerAs('app', () => ({
+export default registerAs('app', (): AppConfig => ({
   // 应用基础配置
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
