@@ -56,7 +56,8 @@ src/
 │   ├── auth/                     # 认证模块
 │   ├── user/                     # 用户模块
 │   ├── album/                    # 相册模块
-│   └── image/                    # 图片模块
+│   ├── image/                    # 图片模块
+│   └── system/                   # 系统配置模块
 │       ├── entities/             # 数据库实体
 │       ├── repositories/         # 数据访问层 (Repository)
 │       ├── dto/                  # 数据传输对象
@@ -1082,9 +1083,67 @@ export class TokenService {
 ```
 ```
 
-### 2. 密码安全
+### 2. 用户注册控制
 
-#### 2.1 密码加密
+#### 2.1 注册开关设计
+
+**原则**: 支持动态控制用户注册功能的开启和关闭，提升生产环境安全性。
+
+**环境变量配置**:
+```bash
+# 用户注册配置
+ENABLE_USER_REGISTRATION=true        # 是否开启用户注册功能 (true=开启注册, false=关闭注册)
+                                    # 生产环境建议设置为 false，由管理员手动创建用户账户
+```
+
+**实现规范**:
+```typescript
+// 在注册接口中检查注册开关
+async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
+  // 检查是否开启用户注册功能
+  const enableUserRegistration = this.configService.get<boolean>('ENABLE_USER_REGISTRATION', true);
+  if (!enableUserRegistration) {
+    throw new ForbiddenException('注册功能已关闭，请联系管理员创建账户');
+  }
+
+  // 继续正常注册流程...
+  const user = await this.authService.register(registerUserDto);
+  return user;
+}
+```
+
+**配置最佳实践**:
+- **开发环境**: `ENABLE_USER_REGISTRATION=true` - 便于测试和开发
+- **测试环境**: `ENABLE_USER_REGISTRATION=true` - 支持自动化测试
+- **生产环境**: `ENABLE_USER_REGISTRATION=false` - 提升安全性，管理员手动创建账户
+- **默认行为**: 如果环境变量未设置，默认开启注册功能（向后兼容）
+
+#### 2.2 前端配置查询
+
+为支持前端动态获取系统配置，新增公开的系统配置接口：
+
+**接口路径**: `GET /api/system/config`
+**访问权限**: 无需认证，公开访问
+**返回信息**:
+- 用户注册开关状态
+- 文件上传大小限制
+- 支持的图片格式和MIME类型
+
+**响应示例**:
+```json
+{
+  "enableUserRegistration": false,
+  "maxFileSize": 104857600,
+  "maxFileSizeMB": 100,
+  "supportedFormats": ["JPEG", "PNG", "GIF", "WebP", "AVIF", "BMP", "SVG", "HEIF", "HEIC"],
+  "allowedMimeTypes": ["image/jpeg", "image/png", "image/gif", ...],
+  "allowedExtensions": ["jpg", "jpeg", "png", "gif", "webp", ...]
+}
+```
+
+### 3. 密码安全
+
+#### 3.1 密码加密
 
 ```typescript
 import * as bcrypt from 'bcrypt';
@@ -1102,7 +1161,7 @@ export class AuthService {
 }
 ```
 
-#### 2.2 密码强度验证
+#### 3.2 密码强度验证
 
 ```typescript
 export const StrongPasswordValidator = (
@@ -1137,9 +1196,9 @@ export const StrongPasswordValidator = (
 };
 ```
 
-### 3. 安全ID设计
+### 4. 安全ID设计
 
-#### 3.1 安全ID规范
+#### 4.1 安全ID规范
 
 使用 Feistel 网络加密生成安全的短路径ID，防止ID泄露和批量扫描：
 
@@ -1195,7 +1254,7 @@ export class SecureIdUtil {
 }
 ```
 
-#### 3.2 安全ID使用
+#### 4.2 安全ID使用
 
 ```typescript
 // 上传时生成安全ID
@@ -1211,9 +1270,9 @@ const imageId = this.secureIdUtil.decode(secureId);
 const image = await this.imageRepository.findById(imageId.toString());
 ```
 
-### 4. 输入验证
+### 5. 输入验证
 
-#### 4.1 DTO 验证
+#### 5.1 DTO 验证
 
 ```typescript
 export class CreateUserDto {
@@ -1236,7 +1295,7 @@ export class CreateUserDto {
 }
 ```
 
-#### 4.2 文件上传验证
+#### 5.2 文件上传验证
 
 ```typescript
 @Injectable()

@@ -26,7 +26,7 @@ NestEidos 是一个基于 **NestJS** 构建的企业级图床服务，提供完�
 ### 核心优势
 
 - 🚀 **高性能**: Redis 缓存 + 智能图片格式转换 (WebP/AVIF)
-- 🔒 **安全可靠**: JWT 认证 + 安全ID加密 + 多层防护
+- 🔒 **安全可靠**: 自定义Token认证 + 安全ID加密 + 多层防护
 - 📁 **智能存储**: MinIO 对象存储 + 多格式自动转换
 - 🎯 **易用性强**: RESTful API + Swagger 文档 + 统一响应格式
 - 🔧 **易于扩展**: 模块化架构 + Repository 模式 + 依赖注入
@@ -60,11 +60,12 @@ NestEidos 是一个基于 **NestJS** 构建的企业级图床服务，提供完�
 ## 功能特性
 
 ### 🔐 用户认证与授权
-- **用户注册/登录**: 安全的用户认证流程
+- **用户注册/登录**: 安全的用户认证流程，支持注册开关控制
 - **自定义 Token**: 基于雪花算法的无状态身份验证
 - **角色管理**: 管理员/普通用户权限区分
 - **账户安全**: 失败尝试限制 + 账户锁定机制
 - **管理员功能**: 完整的用户管理接口，支持用户状态管理、密码重置等
+- **注册控制**: 通过环境变量 `ENABLE_USER_REGISTRATION` 动态控制用户注册功能
 
 ### 📸 图片处理与管理
 - **多格式支持**: JPEG、PNG、GIF、WebP、AVIF、BMP
@@ -140,6 +141,11 @@ src/
 │   │   ├── auth.controller.ts
 │   │   ├── guards/               # 认证守卫
 │   │   └── dto/                  # 数据传输对象
+│   ├── system/                   # 系统配置模块
+│   │   ├── system.module.ts
+│   │   ├── system.controller.ts
+│   │   ├── dto/                  # 系统配置DTO
+│   │   └── system.controller.spec.ts  # 单元测试
 │   ├── user/                     # 用户模块
 │   │   ├── user.module.ts
 │   │   ├── user.service.ts
@@ -215,46 +221,46 @@ CREATE TABLE album (
 CREATE TABLE image (
     id BIGINT PRIMARY KEY,                    -- 雪花算法ID
     user_id BIGINT NOT NULL,                  -- 所属用户ID
-    album_id BIGINT DEFAULT 0,                -- 所属相册ID (0表示未分类)
-    original_name VARCHAR(255),               -- 原始文件名
+    album_id BIGINT NOT NULL DEFAULT 0,       -- 所属相册ID (0表示未分类)
+    original_name VARCHAR(255) NOT NULL,       -- 原始文件名
     title VARCHAR(255),                       -- 图片标题
-
-    -- 文件元数据
-    image_hash CHAR(64),                      -- SHA256哈希 (完整性校验)
-    image_size BIGINT,                        -- 文件大小 (字节)
-    image_mime_type VARCHAR(64),              -- MIME类型
-    image_width INTEGER,                      -- 图片宽度
-    image_height INTEGER,                     -- 图片高度
-    has_transparency BOOLEAN DEFAULT FALSE,    -- 是否有透明通道
-    is_animated BOOLEAN DEFAULT FALSE,        -- 是否为动画
+    image_hash CHAR(64) NOT NULL,              -- SHA256哈希 (完整性校验)
+    image_size BIGINT NOT NULL CHECK (image_size >= 0), -- 文件大小 (字节)
+    image_mime_type VARCHAR(64) NOT NULL,      -- MIME类型
+    image_width INTEGER NOT NULL CHECK (image_width > 0), -- 图片宽度
+    image_height INTEGER NOT NULL CHECK (image_height > 0), -- 图片高度
+    has_transparency BOOLEAN NOT NULL DEFAULT FALSE, -- 是否有透明通道
+    is_animated BOOLEAN NOT NULL DEFAULT FALSE,     -- 是否为动画
+    secure_url VARCHAR(512) NOT NULL,          -- 安全URL，防止遍历
 
     -- 存储路径 (MinIO 对象键)
-    original_key VARCHAR(512),                -- 原图存储路径
-    jpeg_key VARCHAR(512),                    -- JPEG格式路径
-    webp_key VARCHAR(512),                    -- WebP格式路径
-    avif_key VARCHAR(512),                    -- AVIF格式路径
+    original_key VARCHAR(512) NOT NULL,        -- 原图存储路径
+    jpeg_key VARCHAR(512),                     -- JPEG格式路径
+    webp_key VARCHAR(512),                     -- WebP格式路径
+    avif_key VARCHAR(512),                     -- AVIF格式路径
 
     -- 格式标识
-    has_jpeg BOOLEAN DEFAULT FALSE,           -- 是否已生成JPEG
-    has_webp BOOLEAN DEFAULT FALSE,           -- 是否已生成WebP
-    has_avif BOOLEAN DEFAULT FALSE,           -- 是否已生成AVIF
+    has_jpeg BOOLEAN NOT NULL DEFAULT FALSE,    -- 是否已生成JPEG
+    has_webp BOOLEAN NOT NULL DEFAULT FALSE,    -- 是否已生成WebP
+    has_avif BOOLEAN NOT NULL DEFAULT FALSE,    -- 是否已生成AVIF
 
     -- 转换参数 (JSONB格式)
-    convert_jpeg_param JSONB,                 -- JPEG转换参数
-    convert_webp_param JSONB,                 -- WebP转换参数
-    convert_avif_param JSONB,                 -- AVIF转换参数
+    convert_jpeg_param JSONB NOT NULL DEFAULT '{}'::jsonb, -- JPEG转换参数
+    convert_webp_param JSONB NOT NULL DEFAULT '{}'::jsonb, -- WebP转换参数
+    convert_avif_param JSONB NOT NULL DEFAULT '{}'::jsonb, -- AVIF转换参数
 
     -- 业务配置
-    default_format VARCHAR(20) DEFAULT 'avif', -- 默认返回格式
-    expire_policy SMALLINT DEFAULT 1,          -- 过期策略 (1-永久, 2-指定时间, 3-7天)
-    expires_at TIMESTAMP DEFAULT '9999-12-31', -- 过期时间
-    nsfw_score REAL,                           -- NSFW评分 (预留)
+    default_format VARCHAR(20) NOT NULL DEFAULT 'avif', -- 默认返回格式
+    expire_policy SMALLINT NOT NULL,          -- 过期策略 (1-永久, 2-指定时间, 3-限时删除)
+    expires_at TIMESTAMP NOT NULL DEFAULT '9999-12-31 23:59:59'::timestamp, -- 过期时间
+    nsfw_score REAL CHECK (nsfw_score >= 0.0 AND nsfw_score <= 1.0), -- NSFW评分
 
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 
-    FOREIGN KEY (user_id) REFERENCES user(id),
-    FOREIGN KEY (album_id) REFERENCES album(id)
+    -- 约束
+    CONSTRAINT chk_image_default_format CHECK (default_format IN ('original','jpeg','webp','avif')),
+    CONSTRAINT chk_image_expire_policy CHECK (expire_policy IN (1, 2, 3))
 );
 ```
 
@@ -264,7 +270,7 @@ CREATE TABLE image (
 
 | 模块 | 端点 | 方法 | 认证 | 描述 |
 |------|------|------|------|------|
-| **认证** | `/auth/register` | POST | ❌ | 用户注册 |
+| **认证** | `/auth/register` | POST | ❌ | 用户注册 (支持注册开关控制) |
 | **认证** | `/auth/login` | POST | ❌ | 用户登录 |
 | **认证** | `/auth/profile` | GET | ✅ | 获取当前用户信息 |
 | **认证** | `/auth/logout` | POST | ✅ | 用户注销 |
@@ -292,8 +298,12 @@ CREATE TABLE image (
 | 模块 | 端点 | 方法 | 认证 | 描述 |
 |------|------|------|------|------|
 | **图片** | `/image/upload` | POST | ✅ | 上传图片 |
-| **图片** | `/image/list` | GET | ✅ | 获取图片列表 |
+| **图片** | `/images` | GET | ✅ | 获取图片列表 |
 | **图片** | `/image/:id` | DELETE | ✅ | 删除图片 |
+
+| 模块 | 端点 | 方法 | 认证 | 描述 |
+|------|------|------|------|------|
+| **系统** | `/system/config` | GET | ❌ | 获取系统配置信息 |
 
 | 模块 | 端点 | 方法 | 认证 | 描述 |
 |------|------|------|------|------|
@@ -373,11 +383,16 @@ NODE_ENV=development
 
 # 文件上传配置
 UPLOAD_MAX_FILE_SIZE=104857600
+
+# 用户注册配置
+ENABLE_USER_REGISTRATION=true        # 是否开启用户注册功能 (true=开启注册, false=关闭注册)
+                                    # 生产环境建议设置为 false，由管理员手动创建用户账户
 ```
 
 **重要提示**：
 - 生产环境中必须使用强密码和密钥
 - `SECURE_ID_SECRET_KEY` 应使用 `openssl rand -hex 32` 生成
+- 生产环境建议设置 `ENABLE_USER_REGISTRATION=false` 关闭公开注册，由管理员手动创建用户账户
 - 详细的配置说明和安全建议请参考 `.env.example` 文件
 
 ### 启动服务
@@ -400,7 +415,35 @@ npm run test
 
 ## 部署指南
 
-### Docker 部署
+### 传统部署
+
+```bash
+# 构建项目
+npm run build
+
+# 启动生产服务
+npm run start:prod
+```
+
+### Docker 部署 (可选)
+
+如需使用 Docker 部署，可创建以下 `Dockerfile`：
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start:prod"]
+```
 
 ```bash
 # 构建镜像
@@ -410,8 +453,7 @@ docker build -t nest-eidos .
 docker run -d \
   --name nest-eidos \
   -p 3000:3000 \
-  -e DATABASE_URL=postgresql://... \
-  -e REDIS_URL=redis://... \
+  --env-file ./.env \
   nest-eidos
 ```
 
