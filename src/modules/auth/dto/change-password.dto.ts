@@ -21,13 +21,18 @@ export class ChangePasswordDto {
     required: true,
     type: String,
     minLength: 8,
-    pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$',
+    pattern:
+      '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$',
   })
   @IsString({ message: '新密码必须是字符串' })
   @IsNotEmpty({ message: '新密码不能为空' })
   @MinLength(8, { message: '新密码至少需要8个字符' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
-    message: '新密码必须至少8位，包含大写字母、小写字母、数字和特殊字符(@$!%*?&)',
-  })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    {
+      message:
+        '新密码必须至少8位，包含大写字母、小写字母、数字和特殊字符(@$!%*?&)',
+    },
+  )
   newPassword: string;
 }

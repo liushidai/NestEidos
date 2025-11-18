@@ -31,4 +31,4 @@ const healthCheck = async () => {
 };
 
 // 执行健康检查
-healthCheck();
+void healthCheck();

@@ -71,7 +71,10 @@ export class TempFileService {
   /**
    * 创建新的临时文件并写入内容
    */
-  async createTempFile(content: Buffer | string, extension: string = 'tmp'): Promise<string> {
+  async createTempFile(
+    content: Buffer | string,
+    extension: string = 'tmp',
+  ): Promise<string> {
     const tempPath = this.generateTempPath(`temp.${extension}`);
 
     try {
@@ -116,10 +119,10 @@ export class TempFileService {
    * 批量删除临时文件
    */
   async deleteTempFiles(filePaths: string[]): Promise<void> {
-    const deletePromises = filePaths.map(path =>
-      this.deleteTempFile(path).catch(error => {
+    const deletePromises = filePaths.map((path) =>
+      this.deleteTempFile(path).catch((error) => {
         this.logger.error(`删除临时文件失败: ${path}`, error);
-      })
+      }),
     );
 
     await Promise.all(deletePromises);
@@ -131,8 +134,8 @@ export class TempFileService {
   async cleanupAllTempFiles(): Promise<void> {
     try {
       const files = await fs.readdir(this.tempDir);
-      const deletePromises = files.map(file =>
-        fs.unlink(join(this.tempDir, file))
+      const deletePromises = files.map((file) =>
+        fs.unlink(join(this.tempDir, file)),
       );
 
       await Promise.all(deletePromises);
@@ -146,7 +149,9 @@ export class TempFileService {
   /**
    * 清理过期的临时文件（超过指定时间未修改的文件）
    */
-  async cleanupExpiredFiles(maxAge: number = 24 * 60 * 60 * 1000): Promise<void> {
+  async cleanupExpiredFiles(
+    maxAge: number = 24 * 60 * 60 * 1000,
+  ): Promise<void> {
     try {
       const files = await fs.readdir(this.tempDir);
       const now = Date.now();

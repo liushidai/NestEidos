@@ -19,7 +19,10 @@ export class SnowflakeUtil {
   }
 
   // 单例模式获取实例
-  public static getInstance(workerId: number = 1, datacenterId: number = 1): SnowflakeUtil {
+  public static getInstance(
+    workerId: number = 1,
+    datacenterId: number = 1,
+  ): SnowflakeUtil {
     if (!SnowflakeUtil.instance) {
       SnowflakeUtil.instance = new SnowflakeUtil(workerId, datacenterId);
     }
@@ -32,7 +35,9 @@ export class SnowflakeUtil {
 
     // 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过，应当抛出异常
     if (timestamp < this.lastTimestamp) {
-      throw new Error(`Clock moved backwards. Refusing to generate id for ${this.lastTimestamp - timestamp} milliseconds`);
+      throw new Error(
+        `Clock moved backwards. Refusing to generate id for ${this.lastTimestamp - timestamp} milliseconds`,
+      );
     }
 
     // 如果是同一时间生成的，则进行毫秒内序列
@@ -63,9 +68,9 @@ export class SnowflakeUtil {
     const epoch = 1288834974657n; // 雪花算法纪元时间戳
 
     const id =
-      (BigInt(timestamp) - epoch) << timestampLeftShift |
-      BigInt(this.datacenterId) << datacenterIdShift |
-      BigInt(this.workerId) << workerIdShift |
+      ((BigInt(timestamp) - epoch) << timestampLeftShift) |
+      (BigInt(this.datacenterId) << datacenterIdShift) |
+      (BigInt(this.workerId) << workerIdShift) |
       (BigInt(this.sequence) & sequenceMask);
 
     return id.toString();
@@ -87,6 +92,9 @@ export class SnowflakeUtil {
 }
 
 // 导出便利函数
-export function generateSnowflakeId(workerId: number = 1, datacenterId: number = 1): string {
+export function generateSnowflakeId(
+  workerId: number = 1,
+  datacenterId: number = 1,
+): string {
   return SnowflakeUtil.getInstance(workerId, datacenterId).nextId();
 }

@@ -1,4 +1,10 @@
-import { Injectable, Logger, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { Image } from './entities/image.entity';
@@ -11,7 +17,7 @@ import {
   WEBP_PRESETS,
   AVIF_PRESETS,
   QUALITY_MAPPING,
-  QualityType
+  QualityType,
 } from '@/common/constants/image-conversion-params';
 import { StorageService } from '@/services/storage.service';
 import { ImageConversionService } from '@/services/image-conversion.service';
@@ -37,7 +43,8 @@ export class ImageService {
     fileData: Express.Multer.File,
   ): Promise<Image> {
     const imageId = generateSnowflakeId();
-    const qualityType = QUALITY_MAPPING[createImageDto.quality as QualityType] || 'general';
+    const qualityType =
+      QUALITY_MAPPING[createImageDto.quality as QualityType] || 'general';
 
     try {
       // 1. 验证图片格式
@@ -49,7 +56,9 @@ export class ImageService {
       const imageHash = this.calculateImageHash(fileData.buffer);
 
       // 3. 获取图片元数据
-      const metadata = await this.imageConversionService.getImageMetadata(fileData.buffer);
+      const metadata = await this.imageConversionService.getImageMetadata(
+        fileData.buffer,
+      );
       const { width, height, hasTransparency, isAnimated, format } = metadata;
 
       // 4. 生成安全的URL
@@ -60,14 +69,21 @@ export class ImageService {
       const originalExtension = imageFormat?.extensions[0] || 'jpg';
 
       // 6. 创建转换计划
-      const conversionPlan = this.imageConversionService.createConversionPlan(metadata);
+      const conversionPlan =
+        this.imageConversionService.createConversionPlan(metadata);
 
       // 7. 准备转换参数
-      const convertJpegParam = conversionPlan.shouldGenerateJpeg ? JPEG_PRESETS[qualityType] : {};
-      const convertWebpParam = conversionPlan.shouldGenerateWebp
-        ? (format === 'bmp' ? { lossless: true, reductionEffort: 6 } : WEBP_PRESETS[qualityType](hasTransparency, isAnimated))
+      const convertJpegParam = conversionPlan.shouldGenerateJpeg
+        ? JPEG_PRESETS[qualityType]
         : {};
-      const convertAvifParam = conversionPlan.shouldGenerateAvif ? AVIF_PRESETS[qualityType](hasTransparency, isAnimated) : {};
+      const convertWebpParam = conversionPlan.shouldGenerateWebp
+        ? format === 'bmp'
+          ? { lossless: true, reductionEffort: 6 }
+          : WEBP_PRESETS[qualityType](hasTransparency, isAnimated)
+        : {};
+      const convertAvifParam = conversionPlan.shouldGenerateAvif
+        ? AVIF_PRESETS[qualityType](hasTransparency, isAnimated)
+        : {};
 
       // 8. 上传原始文件
       let originalBuffer = fileData.buffer;
@@ -76,17 +92,26 @@ export class ImageService {
 
       // BMP特殊处理：转换为无损WebP替换原图
       if (format === 'bmp') {
-        const bmpResult = await this.imageConversionService.convertBmpToLosslessWebP(fileData.buffer);
+        const bmpResult =
+          await this.imageConversionService.convertBmpToLosslessWebP(
+            fileData.buffer,
+          );
         if (bmpResult.success) {
           originalBuffer = bmpResult.buffer;
           originalKey = `originals/${secureUrl}.webp`;
           originalMimeType = 'image/webp'; // 更新MIME类型
         } else {
-          throw new InternalServerErrorException(`BMP转换失败: ${bmpResult.error}`);
+          throw new InternalServerErrorException(
+            `BMP转换失败: ${bmpResult.error}`,
+          );
         }
       }
 
-      await this.storageService.upload(originalKey, originalBuffer, originalMimeType);
+      await this.storageService.upload(
+        originalKey,
+        originalBuffer,
+        originalMimeType,
+      );
 
       // 9. 转换并上传其他格式
       let jpegKey: string | null = null;
@@ -99,11 +124,12 @@ export class ImageService {
       if (conversionPlan.shouldGenerateAvif) formatsToConvert.push('avif');
 
       if (formatsToConvert.length > 0) {
-        const conversionResults = await this.imageConversionService.convertImageBatch(
-          fileData.buffer,
-          formatsToConvert,
-          createImageDto.quality || 1,
-        );
+        const conversionResults =
+          await this.imageConversionService.convertImageBatch(
+            fileData.buffer,
+            formatsToConvert,
+            createImageDto.quality || 1,
+          );
 
         for (const result of conversionResults) {
           if (result.success) {
@@ -124,7 +150,9 @@ export class ImageService {
                 break;
             }
           } else {
-            this.logger.warn(`图片转换失败: ${format} -> ${result.format}, 错误: ${result.error}`);
+            this.logger.warn(
+              `图片转换失败: ${format} -> ${result.format}, 错误: ${result.error}`,
+            );
           }
         }
       }
@@ -175,7 +203,9 @@ export class ImageService {
         convertJpegParam,
         convertWebpParam,
         convertAvifParam,
-        defaultFormat: createImageDto.format as 'original' | 'jpeg' | 'webp' | 'avif' || 'avif',
+        defaultFormat:
+          (createImageDto.format as 'original' | 'jpeg' | 'webp' | 'avif') ||
+          'avif',
         expirePolicy,
         expiresAt,
         createdAt: new Date(),
@@ -185,10 +215,9 @@ export class ImageService {
       const savedImage = await this.imageRepository.create(imageData);
 
       this.logger.log(
-        `图片上传成功: ${fileData.originalname} -> ${savedImage.id}, 转换格式: [${formatsToConvert.join(', ')}]`
+        `图片上传成功: ${fileData.originalname} -> ${savedImage.id}, 转换格式: [${formatsToConvert.join(', ')}]`,
       );
       return savedImage;
-
     } catch (error) {
       this.logger.error(`图片上传失败: ${fileData.originalname}`, error);
 
@@ -206,8 +235,8 @@ export class ImageService {
    */
   async findByUserId(userId: string, queryDto: QueryImageDto) {
     const { page = '1', limit = '20', albumId } = queryDto;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Number.parseInt(page, 10);
+    const limitNum = Number.parseInt(limit, 10);
 
     const result = await this.imageRepository.findByUserId(
       userId,
@@ -215,7 +244,7 @@ export class ImageService {
       limitNum,
       undefined, // search
       albumId,
-      undefined // mimeType
+      undefined, // mimeType
     );
 
     return {
@@ -254,7 +283,11 @@ export class ImageService {
    * 更新图片信息
    */
   async update(id: string, userId: string, updateImageDto: UpdateImageDto) {
-    const result = await this.imageRepository.update(id, userId, updateImageDto);
+    const result = await this.imageRepository.update(
+      id,
+      userId,
+      updateImageDto,
+    );
     return result.updatedImage;
   }
 
@@ -281,7 +314,9 @@ export class ImageService {
       // 从MinIO删除文件
       if (keysToDelete.length > 0) {
         await this.storageService.deleteMany(keysToDelete);
-        this.logger.debug(`已删除 ${keysToDelete.length} 个文件: ${keysToDelete.join(', ')}`);
+        this.logger.debug(
+          `已删除 ${keysToDelete.length} 个文件: ${keysToDelete.join(', ')}`,
+        );
       }
 
       // 从数据库删除记录

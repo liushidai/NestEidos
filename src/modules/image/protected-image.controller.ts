@@ -7,9 +7,16 @@ import {
   Body,
   UseGuards,
   Request,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ImageService } from './image.service';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
@@ -26,7 +33,6 @@ interface AuthenticatedRequest extends ExpressRequest {
 export class ProtectedImageController {
   constructor(private readonly imageService: ImageService) {}
 
-  
   @Get(':id')
   @ApiOperation({ summary: '获取图片详情' })
   @ApiParam({ name: 'id', description: '图片ID' })
@@ -40,7 +46,8 @@ export class ProtectedImageController {
         albumId: '1234567890123456789',
         originalName: 'photo.jpg',
         title: '一只可爱的猫咪',
-        imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        imageHash:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         imageSize: 1024000,
         imageMimeType: 'image/jpeg',
         imageWidth: 1920,
@@ -51,7 +58,8 @@ export class ProtectedImageController {
         avifKey: 'processed/1234567890123456790.avif',
         hasTransparency: false,
         isAnimated: false,
-        secureUrl: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        secureUrl:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         hasJpeg: true,
         hasWebp: true,
         hasAvif: true,
@@ -98,7 +106,8 @@ export class ProtectedImageController {
         albumId: '1234567890123456789',
         originalName: 'photo.jpg',
         title: '更新后的图片标题',
-        imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        imageHash:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         imageSize: 1024000,
         imageMimeType: 'image/jpeg',
         imageWidth: 1920,
@@ -109,7 +118,8 @@ export class ProtectedImageController {
         avifKey: 'processed/1234567890123456790.avif',
         hasTransparency: false,
         isAnimated: false,
-        secureUrl: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        secureUrl:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         hasJpeg: true,
         hasWebp: true,
         hasAvif: true,

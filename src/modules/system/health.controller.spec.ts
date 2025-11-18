@@ -25,7 +25,7 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    mockDataSource = module.get(DataSource) as jest.Mocked<DataSource>;
+    mockDataSource = module.get(DataSource);
 
     jest.clearAllMocks();
   });

@@ -41,7 +41,7 @@ describe('AlbumService', () => {
     }).compile();
 
     service = module.get<AlbumService>(AlbumService);
-    repository = module.get(AlbumRepository) as jest.Mocked<AlbumRepository>;
+    repository = module.get(AlbumRepository);
 
     // 清除所有 mock 调用记录
     jest.clearAllMocks();
@@ -71,7 +71,9 @@ describe('AlbumService', () => {
       const error = new Error('Repository error');
       mockRepository.create.mockRejectedValue(error);
 
-      await expect(service.create(createAlbumDto, userId)).rejects.toThrow(error);
+      await expect(service.create(createAlbumDto, userId)).rejects.toThrow(
+        error,
+      );
     });
   });
 
@@ -81,7 +83,9 @@ describe('AlbumService', () => {
 
       const result = await service.findById('1234567890123456789');
 
-      expect(mockRepository.findById).toHaveBeenCalledWith('1234567890123456789');
+      expect(mockRepository.findById).toHaveBeenCalledWith(
+        '1234567890123456789',
+      );
       expect(result).toEqual(mockAlbum);
     });
 
@@ -99,27 +103,45 @@ describe('AlbumService', () => {
     it('should return album if found for user', async () => {
       mockRepository.findByIdAndUserId.mockResolvedValue(mockAlbum);
 
-      const result = await service.findByIdAndUserId('1234567890123456789', '1234567890123456788');
+      const result = await service.findByIdAndUserId(
+        '1234567890123456789',
+        '1234567890123456788',
+      );
 
-      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith('1234567890123456789', '1234567890123456788');
+      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith(
+        '1234567890123456789',
+        '1234567890123456788',
+      );
       expect(result).toEqual(mockAlbum);
     });
 
     it('should return null if album not found for user', async () => {
       mockRepository.findByIdAndUserId.mockResolvedValue(null);
 
-      const result = await service.findByIdAndUserId('1234567890123456789', 'wronguser');
+      const result = await service.findByIdAndUserId(
+        '1234567890123456789',
+        'wronguser',
+      );
 
-      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith('1234567890123456789', 'wronguser');
+      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith(
+        '1234567890123456789',
+        'wronguser',
+      );
       expect(result).toBeNull();
     });
 
     it('should return null if album does not exist', async () => {
       mockRepository.findByIdAndUserId.mockResolvedValue(null);
 
-      const result = await service.findByIdAndUserId('nonexistent', '1234567890123456788');
+      const result = await service.findByIdAndUserId(
+        'nonexistent',
+        '1234567890123456788',
+      );
 
-      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith('nonexistent', '1234567890123456788');
+      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith(
+        'nonexistent',
+        '1234567890123456788',
+      );
       expect(result).toBeNull();
     });
   });
@@ -142,7 +164,12 @@ describe('AlbumService', () => {
 
       const result = await service.findByUserId(userId, queryDto);
 
-      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId, 1, 10, undefined);
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+        1,
+        10,
+        undefined,
+      );
       expect(result).toEqual(expectedResult);
     });
 
@@ -161,7 +188,12 @@ describe('AlbumService', () => {
 
       const result = await service.findByUserId(userId, queryDto);
 
-      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId, 2, 5, '相册');
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+        2,
+        5,
+        '相册',
+      );
       expect(result).toEqual(expectedResult);
     });
 
@@ -179,15 +211,21 @@ describe('AlbumService', () => {
 
       const result = await service.findByUserId(userId, queryDto);
 
-      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId, 1, 10, undefined);
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+        1,
+        10,
+        undefined,
+      );
       expect(result).toEqual(expectedResult);
     });
 
     it('should validate page and limit parameters', async () => {
       const invalidQueryDto: QueryAlbumDto = { page: -1, limit: 0 };
 
-      await expect(service.findByUserId(userId, invalidQueryDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.findByUserId(userId, invalidQueryDto),
+      ).rejects.toThrow(BadRequestException);
 
       expect(mockRepository.findByUserId).not.toHaveBeenCalled();
     });
@@ -195,8 +233,9 @@ describe('AlbumService', () => {
     it('should reject limit greater than 100', async () => {
       const invalidQueryDto: QueryAlbumDto = { page: 1, limit: 101 };
 
-      await expect(service.findByUserId(userId, invalidQueryDto))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        service.findByUserId(userId, invalidQueryDto),
+      ).rejects.toThrow(BadRequestException);
 
       expect(mockRepository.findByUserId).not.toHaveBeenCalled();
     });
@@ -215,7 +254,12 @@ describe('AlbumService', () => {
 
       const result = await service.findByUserId(userId, queryDto);
 
-      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId, 2, 5, undefined);
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+        2,
+        5,
+        undefined,
+      );
       expect(result).toEqual(expectedResult);
     });
   });
@@ -234,7 +278,11 @@ describe('AlbumService', () => {
 
       const result = await service.update(albumId, userId, updateAlbumDto);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(albumId, userId, updateAlbumDto);
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        albumId,
+        userId,
+        updateAlbumDto,
+      );
       expect(result).toEqual(updatedAlbum);
     });
 
@@ -242,28 +290,39 @@ describe('AlbumService', () => {
       const error = new Error('相册不存在或无权限操作');
       mockRepository.update.mockRejectedValue(error);
 
-      await expect(service.update(albumId, userId, updateAlbumDto))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(albumId, userId, updateAlbumDto),
+      ).rejects.toThrow(NotFoundException);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(albumId, userId, updateAlbumDto);
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        albumId,
+        userId,
+        updateAlbumDto,
+      );
     });
 
     it('should throw NotFoundException if album does not belong to user', async () => {
       const error = new Error('相册不存在或无权限操作');
       mockRepository.update.mockRejectedValue(error);
 
-      await expect(service.update(albumId, 'wronguser', updateAlbumDto))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(albumId, 'wronguser', updateAlbumDto),
+      ).rejects.toThrow(NotFoundException);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(albumId, 'wronguser', updateAlbumDto);
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        albumId,
+        'wronguser',
+        updateAlbumDto,
+      );
     });
 
     it('should rethrow other errors from repository', async () => {
       const error = new Error('Database error');
       mockRepository.update.mockRejectedValue(error);
 
-      await expect(service.update(albumId, userId, updateAlbumDto))
-        .rejects.toThrow(error);
+      await expect(
+        service.update(albumId, userId, updateAlbumDto),
+      ).rejects.toThrow(error);
     });
   });
 
@@ -283,8 +342,9 @@ describe('AlbumService', () => {
       const error = new Error('相册不存在或无权限操作');
       mockRepository.delete.mockRejectedValue(error);
 
-      await expect(service.delete(albumId, userId))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.delete(albumId, userId)).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockRepository.delete).toHaveBeenCalledWith(albumId, userId);
     });
@@ -293,8 +353,9 @@ describe('AlbumService', () => {
       const error = new Error('相册不存在或无权限操作');
       mockRepository.delete.mockRejectedValue(error);
 
-      await expect(service.delete(albumId, 'wronguser'))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.delete(albumId, 'wronguser')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockRepository.delete).toHaveBeenCalledWith(albumId, 'wronguser');
     });
@@ -303,8 +364,7 @@ describe('AlbumService', () => {
       const error = new Error('Database error');
       mockRepository.delete.mockRejectedValue(error);
 
-      await expect(service.delete(albumId, userId))
-        .rejects.toThrow(error);
+      await expect(service.delete(albumId, userId)).rejects.toThrow(error);
     });
   });
 
@@ -358,10 +418,12 @@ describe('AlbumService', () => {
       const error = new Error('Database connection failed');
       mockRepository.isAlbumBelongsToUser.mockRejectedValue(error);
 
-      await expect(service.isAlbumBelongsToUser(
-        '1234567890123456789',
-        '1234567890123456788',
-      )).rejects.toThrow(error);
+      await expect(
+        service.isAlbumBelongsToUser(
+          '1234567890123456789',
+          '1234567890123456788',
+        ),
+      ).rejects.toThrow(error);
     });
   });
 
@@ -406,7 +468,12 @@ describe('AlbumService', () => {
 
       const result = await service.findByUserId(userId, queryDto);
 
-      expect(mockRepository.findByUserId).toHaveBeenCalledWith(userId, 1, 10, '相册!@#$%^&*()');
+      expect(mockRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+        1,
+        10,
+        '相册!@#$%^&*()',
+      );
       expect(result).toEqual(expectedResult);
     });
   });
@@ -415,11 +482,13 @@ describe('AlbumService', () => {
     it('should handle large result sets efficiently', async () => {
       const queryDto: QueryAlbumDto = { limit: 100 };
       const userId = '1234567890123456788';
-      const mockAlbums = Array(100).fill(null).map((_, index) => ({
-        ...mockAlbum,
-        id: `album-${index}`,
-        albumName: `相册 ${index}`,
-      }));
+      const mockAlbums = Array(100)
+        .fill(null)
+        .map((_, index) => ({
+          ...mockAlbum,
+          id: `album-${index}`,
+          albumName: `相册 ${index}`,
+        }));
       const expectedResult = {
         albums: mockAlbums,
         total: 100,
@@ -452,8 +521,14 @@ describe('AlbumService', () => {
       await service.isAlbumBelongsToUser(albumId, userId);
 
       expect(mockRepository.findById).toHaveBeenCalledWith(albumId);
-      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith(albumId, userId);
-      expect(mockRepository.isAlbumBelongsToUser).toHaveBeenCalledWith(albumId, userId);
+      expect(mockRepository.findByIdAndUserId).toHaveBeenCalledWith(
+        albumId,
+        userId,
+      );
+      expect(mockRepository.isAlbumBelongsToUser).toHaveBeenCalledWith(
+        albumId,
+        userId,
+      );
     });
   });
 });

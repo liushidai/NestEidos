@@ -48,8 +48,8 @@ describe('AdminInitService', () => {
     }).compile();
 
     service = module.get<AdminInitService>(AdminInitService);
-    userRepository = module.get(UserRepository) as jest.Mocked<UserRepository>;
-    configService = module.get(ConfigService) as jest.Mocked<ConfigService>;
+    userRepository = module.get(UserRepository);
+    configService = module.get(ConfigService);
 
     jest.clearAllMocks();
   });
@@ -116,7 +116,9 @@ describe('AdminInitService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      mockUserRepository.findByUserName.mockRejectedValue(new Error('Database connection failed'));
+      mockUserRepository.findByUserName.mockRejectedValue(
+        new Error('Database connection failed'),
+      );
 
       await service.onModuleInit();
 

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ImageConversionService } from '../services/image-conversion.service';
-import { ImageMetadata, ConversionPlan } from '../services/image-conversion.service';
+import {
+  ImageMetadata,
+  ConversionPlan,
+} from '../services/image-conversion.service';
 
 describe('ImageConversionService - BMP Conversion', () => {
   let service: ImageConversionService;

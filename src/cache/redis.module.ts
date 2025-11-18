@@ -1,16 +1,26 @@
 import { Module, Global } from '@nestjs/common';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { redisConfig } from '../config/redis.config';
 import { CacheService } from './cache.service';
 import { TTL_CONFIGS, TTLUtils } from './ttl.config';
+
+interface RedisConfigOptions {
+  host: string;
+  port: number;
+  connectTimeout?: number;
+  db: number;
+  password?: string;
+  maxRetriesPerRequest?: number;
+  retryDelayOnFailover?: number;
+}
 
 @Global()
 @Module({
   providers: [
     {
       provide: 'REDIS_CLIENT',
-      useFactory: async () => {
-        const config = redisConfig() as any;
+      useFactory: async (): Promise<RedisClientType> => {
+        const config = redisConfig() as RedisConfigOptions;
 
         // 构建 Redis 连接配置对象
         const redisOptions = {

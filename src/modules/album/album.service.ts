@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Album } from './entities/album.entity';
 import { AlbumRepository } from './repositories/album.repository';
 import { CreateAlbumDto } from './dto/create-album.dto';
@@ -9,15 +14,15 @@ import { QueryAlbumDto } from './dto/query-album.dto';
 export class AlbumService {
   private readonly logger = new Logger(AlbumService.name);
 
-  constructor(
-    private readonly albumRepository: AlbumRepository,
-  ) {}
+  constructor(private readonly albumRepository: AlbumRepository) {}
 
   /**
    * 创建相册
    */
   async create(createAlbumDto: CreateAlbumDto, userId: string): Promise<Album> {
-    this.logger.debug(`创建相册: ${createAlbumDto.albumName}, userId: ${userId}`);
+    this.logger.debug(
+      `创建相册: ${createAlbumDto.albumName}, userId: ${userId}`,
+    );
 
     return await this.albumRepository.create({
       ...createAlbumDto,
@@ -47,7 +52,10 @@ export class AlbumService {
    * 分页查询用户的相册
    * 委托给Repository处理，Repository层决定是否使用缓存
    */
-  async findByUserId(userId: string, queryDto: QueryAlbumDto): Promise<{
+  async findByUserId(
+    userId: string,
+    queryDto: QueryAlbumDto,
+  ): Promise<{
     albums: Album[];
     total: number;
     page: number;
@@ -64,20 +72,35 @@ export class AlbumService {
       throw new BadRequestException('分页参数无效');
     }
 
-    this.logger.debug(`分页查询用户相册: userId=${userId}, page=${validatedPage}, limit=${validatedLimit}, search=${search}`);
+    this.logger.debug(
+      `分页查询用户相册: userId=${userId}, page=${validatedPage}, limit=${validatedLimit}, search=${search}`,
+    );
 
-    return await this.albumRepository.findByUserId(userId, validatedPage, validatedLimit, search);
+    return await this.albumRepository.findByUserId(
+      userId,
+      validatedPage,
+      validatedLimit,
+      search,
+    );
   }
 
   /**
    * 更新相册
    * 委托给Repository处理，Repository层负责缓存清理
    */
-  async update(id: string, userId: string, updateAlbumDto: UpdateAlbumDto): Promise<Album> {
+  async update(
+    id: string,
+    userId: string,
+    updateAlbumDto: UpdateAlbumDto,
+  ): Promise<Album> {
     this.logger.debug(`更新相册: albumId=${id}, userId=${userId}`);
 
     try {
-      const { updatedAlbum } = await this.albumRepository.update(id, userId, updateAlbumDto);
+      const { updatedAlbum } = await this.albumRepository.update(
+        id,
+        userId,
+        updateAlbumDto,
+      );
       return updatedAlbum;
     } catch (error) {
       if (error.message === '相册不存在或无权限操作') {
@@ -112,7 +135,10 @@ export class AlbumService {
    * 检查相册是否属于指定用户
    * 委托给Repository处理，Repository层负责实时查询
    */
-  async isAlbumBelongsToUser(albumId: string, userId: string): Promise<boolean> {
+  async isAlbumBelongsToUser(
+    albumId: string,
+    userId: string,
+  ): Promise<boolean> {
     this.logger.debug(`检查相册归属: albumId=${albumId}, userId=${userId}`);
     return await this.albumRepository.isAlbumBelongsToUser(albumId, userId);
   }

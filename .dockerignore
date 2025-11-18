@@ -87,7 +87,6 @@ tests
 **/*.spec.ts
 **/*.test.ts
 jest.config.js
-tsconfig.json
 .eslintrc.js
 .prettierrc
 
@@ -100,11 +99,9 @@ docker-compose*.yml
 # CI/CD
 .github
 
-# Development files
+# Development files (keep necessary configs)
 *.config.js
-*.config.ts
 prettier.config.js
-tsconfig*.json
 
 # Development scripts
 scripts

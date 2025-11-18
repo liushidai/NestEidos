@@ -1,6 +1,13 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
+import { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
 
 @Injectable()
 export class TokenGuard implements CanActivate {
@@ -9,7 +16,7 @@ export class TokenGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractTokenFromRequest(request);
 
     if (!token) {
@@ -32,13 +39,17 @@ export class TokenGuard implements CanActivate {
 
     // 检查用户状态
     if (currentUser.userStatus === 2) {
-      this.logger.warn(`被封锁的用户尝试访问: ${currentUser.userName}, 注销 token`);
+      this.logger.warn(
+        `被封锁的用户尝试访问: ${currentUser.userName}, 注销 token`,
+      );
       await this.authService.logout(token);
       throw new UnauthorizedException('账户已被封锁，请联系管理员');
     }
 
     if (currentUser.userStatus !== 1) {
-      this.logger.warn(`用户状态异常: ${currentUser.userName}, 状态: ${currentUser.userStatus}, 注销 token`);
+      this.logger.warn(
+        `用户状态异常: ${currentUser.userName}, 状态: ${currentUser.userStatus}, 注销 token`,
+      );
       await this.authService.logout(token);
       throw new UnauthorizedException('账户状态异常，请联系管理员');
     }
@@ -46,11 +57,11 @@ export class TokenGuard implements CanActivate {
     // 更新缓存的用户信息（以防有其他信息变更）
     Object.assign(user, {
       userStatus: currentUser.userStatus,
-      updatedAt: currentUser.updatedAt
+      updatedAt: currentUser.updatedAt,
     });
 
     // 将用户信息挂载到 request 对象上
-    (request as any).user = user;
+    request.user = user;
 
     return true;
   }

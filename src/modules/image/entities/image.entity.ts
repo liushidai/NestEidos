@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Album } from '../../album/entities/album.entity';
 
@@ -67,22 +74,43 @@ export class Image {
   @Column({ name: 'has_avif', type: 'boolean', default: false })
   hasAvif: boolean;
 
-  @Column({ name: 'convert_jpeg_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  @Column({
+    name: 'convert_jpeg_param',
+    type: 'jsonb',
+    default: () => "'{}'::jsonb",
+  })
   convertJpegParam: Record<string, any>;
 
-  @Column({ name: 'convert_webp_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  @Column({
+    name: 'convert_webp_param',
+    type: 'jsonb',
+    default: () => "'{}'::jsonb",
+  })
   convertWebpParam: Record<string, any>;
 
-  @Column({ name: 'convert_avif_param', type: 'jsonb', default: () => "'{}'::jsonb" })
+  @Column({
+    name: 'convert_avif_param',
+    type: 'jsonb',
+    default: () => "'{}'::jsonb",
+  })
   convertAvifParam: Record<string, any>;
 
-  @Column({ name: 'default_format', type: 'varchar', length: 20, default: 'avif' })
+  @Column({
+    name: 'default_format',
+    type: 'varchar',
+    length: 20,
+    default: 'avif',
+  })
   defaultFormat: 'original' | 'jpeg' | 'webp' | 'avif';
 
   @Column({ name: 'expire_policy', type: 'smallint' })
   expirePolicy: number;
 
-  @Column({ name: 'expires_at', type: 'timestamp without time zone', default: () => "'9999-12-31 23:59:59'" })
+  @Column({
+    name: 'expires_at',
+    type: 'timestamp without time zone',
+    default: () => "'9999-12-31 23:59:59'",
+  })
   expiresAt: Date;
 
   @Column({ name: 'nsfw_score', type: 'real', nullable: true })

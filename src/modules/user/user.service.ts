@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
 import { UserRepository } from './repositories/user.repository';
@@ -43,14 +48,20 @@ export class UserService {
   /**
    * 分页获取用户列表（管理员功能）
    */
-  async findUsersWithPagination(query: UserQueryDto): Promise<{ users: UserProfileDto[]; total: number; page: number; limit: number; totalPages: number }> {
+  async findUsersWithPagination(query: UserQueryDto): Promise<{
+    users: UserProfileDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
       this.logger.debug(`分页查询用户列表: ${JSON.stringify(query)}`);
 
       const result = await this.userRepository.findUsersWithPagination(query);
 
       // 转换为安全的用户信息（不包含密码）
-      const users = result.users.map(user => UserProfileDto.fromUser(user));
+      const users = result.users.map((user) => UserProfileDto.fromUser(user));
 
       return {
         ...result,
@@ -84,17 +95,27 @@ export class UserService {
   /**
    * 切换用户状态（管理员功能）
    */
-  async toggleUserStatus(id: string, toggleUserStatusDto: ToggleUserStatusDto): Promise<UserProfileDto> {
+  async toggleUserStatus(
+    id: string,
+    toggleUserStatusDto: ToggleUserStatusDto,
+  ): Promise<UserProfileDto> {
     try {
-      this.logger.debug(`切换用户状态: ${id} -> ${toggleUserStatusDto.userStatus}`);
+      this.logger.debug(
+        `切换用户状态: ${id} -> ${toggleUserStatusDto.userStatus}`,
+      );
 
-      const user = await this.userRepository.toggleUserStatus(id, toggleUserStatusDto.userStatus);
+      const user = await this.userRepository.toggleUserStatus(
+        id,
+        toggleUserStatusDto.userStatus,
+      );
 
       if (!user) {
         throw new NotFoundException('用户不存在');
       }
 
-      this.logger.log(`用户状态切换成功: ${user.userName} -> ${toggleUserStatusDto.userStatus}`);
+      this.logger.log(
+        `用户状态切换成功: ${user.userName} -> ${toggleUserStatusDto.userStatus}`,
+      );
 
       return UserProfileDto.fromUser(user);
     } catch (error) {
@@ -106,7 +127,10 @@ export class UserService {
   /**
    * 重置用户密码（管理员功能）
    */
-  async resetUserPassword(id: string, resetPasswordDto: ResetPasswordDto): Promise<{ success: boolean; message: string; newPassword?: string }> {
+  async resetUserPassword(
+    id: string,
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ success: boolean; message: string; newPassword?: string }> {
     try {
       this.logger.debug(`重置用户密码: ${id}`);
 
@@ -130,7 +154,8 @@ export class UserService {
       }
 
       // 加密新密码
-      const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
+      const bcryptRounds =
+        this.configService.get<number>('auth.security.bcryptRounds') || 10;
       const hashedPassword = await bcrypt.hash(newPassword, bcryptRounds);
 
       // 更新密码
@@ -141,7 +166,9 @@ export class UserService {
       return {
         success: true,
         message: '密码重置成功',
-        newPassword: resetPasswordDto.useDefaultPassword ? newPassword : undefined, // 只有使用默认密码时才返回密码
+        newPassword: resetPasswordDto.useDefaultPassword
+          ? newPassword
+          : undefined, // 只有使用默认密码时才返回密码
       };
     } catch (error) {
       this.logger.error(`重置用户密码失败: ${id}`, error.stack);

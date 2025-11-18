@@ -19,8 +19,8 @@ COPY package*.json ./
 # 安装所有依赖（包括 devDependencies）
 RUN npm ci --only=production=false
 
-# 复制源代码
-COPY . .
+# 复制源代码（排除不必要的文件）
+COPY --chown=nestjs:nodejs . .
 
 # 构建应用
 RUN npm run build
@@ -31,19 +31,20 @@ RUN npm run build
 FROM node:18-alpine AS runner
 
 # 创建非 root 用户
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nestjs
 
 # 设置工作目录
 WORKDIR /app
 
+# 从构建阶段复制 package.json
+COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+
 # 只安装生产依赖
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # 从构建阶段复制构建产物
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 # 切换到非 root 用户
 USER nestjs

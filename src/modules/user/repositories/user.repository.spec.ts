@@ -2,7 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
-import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  CacheKeyUtils,
+} from '../../../cache';
 import { User } from '../entities/user.entity';
 
 describe('UserRepository', () => {
@@ -65,7 +70,9 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('1234567890123456789');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'));
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'),
+      );
       expect(result).toEqual(mockUser);
       expect(mockRepository.findOneBy).not.toHaveBeenCalled();
     });
@@ -76,9 +83,17 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('1234567890123456789');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'));
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({ id: '1234567890123456789' });
-      expect(cacheService.set).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'), mockUser, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'),
+      );
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        id: '1234567890123456789',
+      });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'id', '1234567890123456789'),
+        mockUser,
+        TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE),
+      );
       expect(result).toEqual(mockUser);
     });
 
@@ -88,8 +103,12 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findById('nonexistent');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'id', 'nonexistent'));
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({ id: 'nonexistent' });
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'id', 'nonexistent'),
+      );
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        id: 'nonexistent',
+      });
       expect(cacheService.set).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
@@ -101,7 +120,9 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findByUserName('testuser');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'));
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'),
+      );
       expect(result).toEqual(mockUser);
       expect(mockRepository.findOneBy).not.toHaveBeenCalled();
     });
@@ -112,9 +133,17 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findByUserName('testuser');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'));
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({ userName: 'testuser' });
-      expect(cacheService.set).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'), mockUser, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'),
+      );
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        userName: 'testuser',
+      });
+      expect(cacheService.set).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'username', 'testuser'),
+        mockUser,
+        TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE),
+      );
       expect(result).toEqual(mockUser);
     });
 
@@ -124,8 +153,12 @@ describe('UserRepository', () => {
 
       const result = await userRepository.findByUserName('nonexistent');
 
-      expect(cacheService.get).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'nonexistent'));
-      expect(mockRepository.findOneBy).toHaveBeenCalledWith({ userName: 'nonexistent' });
+      expect(cacheService.get).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'username', 'nonexistent'),
+      );
+      expect(mockRepository.findOneBy).toHaveBeenCalledWith({
+        userName: 'nonexistent',
+      });
       expect(cacheService.set).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
@@ -133,7 +166,11 @@ describe('UserRepository', () => {
 
   describe('create', () => {
     it('should create user and clear username cache', async () => {
-      const userData = { userName: 'newuser', passWord: 'password', userType: 10 };
+      const userData = {
+        userName: 'newuser',
+        passWord: 'password',
+        userType: 10,
+      };
       const newUser = {
         id: '9876543210987654321',
         userName: 'newuser',
@@ -151,7 +188,9 @@ describe('UserRepository', () => {
 
       expect(mockRepository.create).toHaveBeenCalledWith(userData);
       expect(mockRepository.save).toHaveBeenCalledWith(newUser);
-      expect(cacheService.delete).toHaveBeenCalledWith(CacheKeyUtils.buildRepositoryKey('user', 'username', 'newuser'));
+      expect(cacheService.delete).toHaveBeenCalledWith(
+        CacheKeyUtils.buildRepositoryKey('user', 'username', 'newuser'),
+      );
       expect(result).toEqual(newUser);
     });
   });

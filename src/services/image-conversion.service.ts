@@ -6,7 +6,7 @@ import {
   AVIF_PRESETS,
   BMP_LOSSLESS_WEBP_PARAM,
   QUALITY_MAPPING,
-  QualityType
+  QualityType,
 } from '@/common/constants/image-conversion-params';
 import { getImageFormatByMimeType } from '@/common/constants/image-formats';
 
@@ -53,7 +53,7 @@ export class ImageConversionService {
         pages: metadata.pages,
         width: metadata.width || 0,
         height: metadata.height || 0,
-        hasTransparency: !!(metadata.hasAlpha),
+        hasTransparency: !!metadata.hasAlpha,
         isAnimated: (metadata.pages || 1) > 1,
       };
     } catch (error) {
@@ -170,12 +170,18 @@ export class ImageConversionService {
           if (format === 'bmp') {
             convertParams = BMP_LOSSLESS_WEBP_PARAM;
           } else {
-            convertParams = WEBP_PRESETS[qualityType](hasTransparency, isAnimated);
+            convertParams = WEBP_PRESETS[qualityType](
+              hasTransparency,
+              isAnimated,
+            );
           }
           break;
 
         case 'avif':
-          convertParams = AVIF_PRESETS[qualityType](hasTransparency, isAnimated);
+          convertParams = AVIF_PRESETS[qualityType](
+            hasTransparency,
+            isAnimated,
+          );
           break;
 
         default:
@@ -183,10 +189,11 @@ export class ImageConversionService {
       }
 
       // 执行转换
-      const outputBuffer = await pipeline[targetFormat](convertParams).toBuffer();
+      const outputBuffer =
+        await pipeline[targetFormat](convertParams).toBuffer();
 
       this.logger.debug(
-        `图片转换成功: ${format} -> ${targetFormat}, 质量: ${qualityType}, 大小: ${buffer.length} -> ${outputBuffer.length} bytes`
+        `图片转换成功: ${format} -> ${targetFormat}, 质量: ${qualityType}, 大小: ${buffer.length} -> ${outputBuffer.length} bytes`,
       );
 
       return {
@@ -197,7 +204,7 @@ export class ImageConversionService {
     } catch (error) {
       this.logger.error(
         `图片转换失败: ${metadata?.format || 'unknown'} -> ${targetFormat}`,
-        error
+        error,
       );
 
       return {
@@ -239,7 +246,7 @@ export class ImageConversionService {
         .toBuffer();
 
       this.logger.debug(
-        `BMP无损转换成功: BMP -> WebP, 大小: ${buffer.length} -> ${outputBuffer.length} bytes`
+        `BMP无损转换成功: BMP -> WebP, 大小: ${buffer.length} -> ${outputBuffer.length} bytes`,
       );
 
       return {

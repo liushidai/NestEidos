@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 import { Album } from '../entities/album.entity';
-import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  CacheKeyUtils,
+} from '../../../cache';
 
 @Injectable()
 export class AlbumRepository {
@@ -47,7 +52,9 @@ export class AlbumRepository {
         // 缓存空值，防止缓存穿透
         const nullMarker = TTLUtils.toCacheableNullValue<Album>();
         await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
-        this.logger.debug(`缓存空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`,
+        );
       }
 
       return album;
@@ -62,38 +69,55 @@ export class AlbumRepository {
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Album | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKey('album', 'user_album', `${userId}:${id}`);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey(
+        'album',
+        'user_album',
+        `${userId}:${id}`,
+      );
 
       // 尝试从缓存获取
       const cachedAlbum = await this.cacheService.get<Album>(cacheKey);
       if (cachedAlbum !== null && cachedAlbum !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedAlbum)) {
-          this.logger.debug(`从缓存获取用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}`);
+          this.logger.debug(
+            `从缓存获取用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}`,
+          );
           return null;
         }
-        this.logger.debug(`从缓存获取用户相册: userId=${userId}, albumId=${id}`);
+        this.logger.debug(
+          `从缓存获取用户相册: userId=${userId}, albumId=${id}`,
+        );
         return cachedAlbum;
       }
 
       // 缓存未命中，从数据库获取
-      this.logger.debug(`从数据库获取用户相册: userId=${userId}, albumId=${id}`);
+      this.logger.debug(
+        `从数据库获取用户相册: userId=${userId}, albumId=${id}`,
+      );
       const album = await this.albumRepository.findOneBy({ id, userId });
 
       // 缓存结果（无论是否存在都缓存）
       if (album) {
         await this.cacheService.set(cacheKey, album, this.CACHE_TTL);
-        this.logger.debug(`缓存用户相册数据: userId=${userId}, albumId=${id}, TTL: ${this.CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存用户相册数据: userId=${userId}, albumId=${id}, TTL: ${this.CACHE_TTL}秒`,
+        );
       } else {
         // 缓存空值，防止缓存穿透
         const nullMarker = TTLUtils.toCacheableNullValue<Album>();
         await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
-        this.logger.debug(`缓存用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存用户相册空值标记（缓存穿透防护）: userId=${userId}, albumId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`,
+        );
       }
 
       return album;
     } catch (error) {
-      this.logger.error(`根据用户ID和相册ID查找相册失败: userId=${userId}, albumId=${id}`, error.stack);
+      this.logger.error(
+        `根据用户ID和相册ID查找相册失败: userId=${userId}, albumId=${id}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -101,7 +125,12 @@ export class AlbumRepository {
   /**
    * 分页查询用户的相册（不使用缓存，因为分页数据变化频繁）
    */
-  async findByUserId(userId: string, page: number, limit: number, search?: string): Promise<{
+  async findByUserId(
+    userId: string,
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<{
     albums: Album[];
     total: number;
     page: number;
@@ -132,7 +161,9 @@ export class AlbumRepository {
 
       const totalPages = Math.ceil(total / limit);
 
-      this.logger.debug(`分页查询用户相册: userId=${userId}, page=${page}, limit=${limit}, total=${total}`);
+      this.logger.debug(
+        `分页查询用户相册: userId=${userId}, page=${page}, limit=${limit}, total=${total}`,
+      );
 
       return {
         albums,
@@ -142,7 +173,10 @@ export class AlbumRepository {
         totalPages,
       };
     } catch (error) {
-      this.logger.error(`分页查询用户相册失败: userId=${userId}, page=${page}, limit=${limit}`, error.stack);
+      this.logger.error(
+        `分页查询用户相册失败: userId=${userId}, page=${page}, limit=${limit}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -155,7 +189,9 @@ export class AlbumRepository {
       const album = this.albumRepository.create(albumData);
       const savedAlbum = await this.albumRepository.save(album);
 
-      this.logger.log(`创建相册成功: ${savedAlbum.albumName} (userId: ${savedAlbum.userId})`);
+      this.logger.log(
+        `创建相册成功: ${savedAlbum.albumName} (userId: ${savedAlbum.userId})`,
+      );
       return savedAlbum;
     } catch (error) {
       this.logger.error(`创建相册失败: ${albumData.albumName}`, error.stack);
@@ -166,7 +202,11 @@ export class AlbumRepository {
   /**
    * 更新相册（自动清理缓存）
    */
-  async update(id: string, userId: string, albumData: Partial<Album>): Promise<{ oldAlbum: Album | null; updatedAlbum: Album }> {
+  async update(
+    id: string,
+    userId: string,
+    albumData: Partial<Album>,
+  ): Promise<{ oldAlbum: Album | null; updatedAlbum: Album }> {
     try {
       // 先查询原始数据
       const oldAlbum = await this.findByIdAndUserId(id, userId);
@@ -184,7 +224,10 @@ export class AlbumRepository {
       this.logger.log(`更新相册成功: ${updatedAlbum.albumName} (id: ${id})`);
       return { oldAlbum, updatedAlbum };
     } catch (error) {
-      this.logger.error(`更新相册失败: id=${id}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `更新相册失败: id=${id}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -206,7 +249,10 @@ export class AlbumRepository {
 
       this.logger.log(`删除相册成功: ${album.albumName} (id: ${id})`);
     } catch (error) {
-      this.logger.error(`删除相册失败: id=${id}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `删除相册失败: id=${id}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -214,12 +260,21 @@ export class AlbumRepository {
   /**
    * 检查相册是否属于指定用户（实时查询，不使用缓存）
    */
-  async isAlbumBelongsToUser(albumId: string, userId: string): Promise<boolean> {
+  async isAlbumBelongsToUser(
+    albumId: string,
+    userId: string,
+  ): Promise<boolean> {
     try {
-      const album = await this.albumRepository.findOneBy({ id: albumId, userId });
+      const album = await this.albumRepository.findOneBy({
+        id: albumId,
+        userId,
+      });
       return !!album;
     } catch (error) {
-      this.logger.error(`检查相册归属失败: albumId=${albumId}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `检查相册归属失败: albumId=${albumId}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -227,19 +282,33 @@ export class AlbumRepository {
   /**
    * 清理相册相关缓存
    */
-  private async clearAlbumCache(albumId: string, userId: string): Promise<void> {
+  private async clearAlbumCache(
+    albumId: string,
+    userId: string,
+  ): Promise<void> {
     try {
       // 清理相册ID缓存
-      const albumIdCacheKey = CacheKeyUtils.buildRepositoryKey('album', 'id', albumId);
+      const albumIdCacheKey = CacheKeyUtils.buildRepositoryKey(
+        'album',
+        'id',
+        albumId,
+      );
       await this.cacheService.delete(albumIdCacheKey);
 
       // 清理用户相册缓存
-      const userAlbumCacheKey = CacheKeyUtils.buildRepositoryKey('album', 'user_album', `${userId}:${albumId}`);
+      const userAlbumCacheKey = CacheKeyUtils.buildRepositoryKey(
+        'album',
+        'user_album',
+        `${userId}:${albumId}`,
+      );
       await this.cacheService.delete(userAlbumCacheKey);
 
       this.logger.debug(`清理相册缓存: albumId=${albumId}, userId=${userId}`);
     } catch (error) {
-      this.logger.warn(`清理相册缓存失败: albumId=${albumId}, userId=${userId}`, error.stack);
+      this.logger.warn(
+        `清理相册缓存失败: albumId=${albumId}, userId=${userId}`,
+        error.stack,
+      );
       // 缓存清理失败不应影响主要功能
     }
   }

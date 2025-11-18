@@ -3,7 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Album } from '../entities/album.entity';
 import { AlbumRepository } from './album.repository';
-import { CacheService, TTL_CONFIGS, TTLUtils, NULL_CACHE_VALUES } from '../../../cache';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  NULL_CACHE_VALUES,
+} from '../../../cache';
 
 describe('AlbumRepository', () => {
   let repository: AlbumRepository;
@@ -77,11 +82,13 @@ describe('AlbumRepository', () => {
 
       expect(result).toEqual(mockAlbum);
       expect(cacheService.get).toHaveBeenCalledWith('repo:album:id:123456789');
-      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789' });
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({
+        id: '123456789',
+      });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:album:id:123456789',
         mockAlbum,
-        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE),
       );
     });
 
@@ -93,11 +100,13 @@ describe('AlbumRepository', () => {
 
       expect(result).toEqual(mockAlbum);
       expect(cacheService.get).toHaveBeenCalledWith('repo:album:id:123456789');
-      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789' });
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({
+        id: '123456789',
+      });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:album:id:123456789',
         mockAlbum,
-        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE),
       );
     });
 
@@ -111,7 +120,7 @@ describe('AlbumRepository', () => {
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:album:id:nonexistent',
         NULL_CACHE_VALUES.NULL_PLACEHOLDER,
-        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE),
       );
     });
   });
@@ -123,7 +132,9 @@ describe('AlbumRepository', () => {
       const result = await repository.findByIdAndUserId('123456789', 'user123');
 
       expect(result).toEqual(mockAlbum);
-      expect(cacheService.get).toHaveBeenCalledWith('repo:album:user_album:user123:123456789');
+      expect(cacheService.get).toHaveBeenCalledWith(
+        'repo:album:user_album:user123:123456789',
+      );
       expect(albumRepository.findOneBy).not.toHaveBeenCalled();
     });
 
@@ -134,12 +145,17 @@ describe('AlbumRepository', () => {
       const result = await repository.findByIdAndUserId('123456789', 'user123');
 
       expect(result).toEqual(mockAlbum);
-      expect(cacheService.get).toHaveBeenCalledWith('repo:album:user_album:user123:123456789');
-      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789', userId: 'user123' });
+      expect(cacheService.get).toHaveBeenCalledWith(
+        'repo:album:user_album:user123:123456789',
+      );
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({
+        id: '123456789',
+        userId: 'user123',
+      });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:album:user_album:user123:123456789',
         mockAlbum,
-        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE),
       );
     });
 
@@ -150,12 +166,17 @@ describe('AlbumRepository', () => {
       const result = await repository.findByIdAndUserId('123456789', 'user123');
 
       expect(result).toEqual(mockAlbum);
-      expect(cacheService.get).toHaveBeenCalledWith('repo:album:user_album:user123:123456789');
-      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: '123456789', userId: 'user123' });
+      expect(cacheService.get).toHaveBeenCalledWith(
+        'repo:album:user_album:user123:123456789',
+      );
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({
+        id: '123456789',
+        userId: 'user123',
+      });
       expect(cacheService.set).toHaveBeenCalledWith(
         'repo:album:user_album:user123:123456789',
         mockAlbum,
-        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.LONG_CACHE),
       );
     });
   });
@@ -213,7 +234,7 @@ describe('AlbumRepository', () => {
       };
       const expectedAlbum = { ...mockAlbum, ...createData };
 
-      jest.spyOn(albumRepository, 'create').mockReturnValue(expectedAlbum as any);
+      jest.spyOn(albumRepository, 'create').mockReturnValue(expectedAlbum);
       jest.spyOn(albumRepository, 'save').mockResolvedValue(expectedAlbum);
 
       const result = await repository.create(createData);
@@ -231,23 +252,33 @@ describe('AlbumRepository', () => {
 
       jest.spyOn(repository, 'findByIdAndUserId').mockResolvedValue(mockAlbum);
       jest.spyOn(albumRepository, 'save').mockResolvedValue(expectedAlbum);
-      jest.spyOn(repository, 'clearAlbumCache' as any).mockResolvedValue(undefined);
+      jest
+        .spyOn(repository, 'clearAlbumCache' as any)
+        .mockResolvedValue(undefined);
 
-      const result = await repository.update('123456789', 'user123', updateData);
+      const result = await repository.update(
+        '123456789',
+        'user123',
+        updateData,
+      );
 
       expect(result).toEqual({
         oldAlbum: mockAlbum,
         updatedAlbum: expectedAlbum,
       });
       expect(albumRepository.save).toHaveBeenCalledWith(expectedAlbum);
-      expect(repository['clearAlbumCache']).toHaveBeenCalledWith('123456789', 'user123');
+      expect(repository['clearAlbumCache']).toHaveBeenCalledWith(
+        '123456789',
+        'user123',
+      );
     });
 
     it('当相册不存在时应该抛出错误', async () => {
       jest.spyOn(repository, 'findByIdAndUserId').mockResolvedValue(null);
 
-      await expect(repository.update('nonexistent', 'user123', {}))
-        .rejects.toThrow('相册不存在或无权限操作');
+      await expect(
+        repository.update('nonexistent', 'user123', {}),
+      ).rejects.toThrow('相册不存在或无权限操作');
     });
   });
 
@@ -255,19 +286,25 @@ describe('AlbumRepository', () => {
     it('应该删除相册并清理缓存', async () => {
       jest.spyOn(repository, 'findByIdAndUserId').mockResolvedValue(mockAlbum);
       jest.spyOn(albumRepository, 'remove').mockResolvedValue(mockAlbum);
-      jest.spyOn(repository, 'clearAlbumCache' as any).mockResolvedValue(undefined);
+      jest
+        .spyOn(repository, 'clearAlbumCache' as any)
+        .mockResolvedValue(undefined);
 
       await repository.delete('123456789', 'user123');
 
       expect(albumRepository.remove).toHaveBeenCalledWith(mockAlbum);
-      expect(repository['clearAlbumCache']).toHaveBeenCalledWith('123456789', 'user123');
+      expect(repository['clearAlbumCache']).toHaveBeenCalledWith(
+        '123456789',
+        'user123',
+      );
     });
 
     it('当相册不存在时应该抛出错误', async () => {
       jest.spyOn(repository, 'findByIdAndUserId').mockResolvedValue(null);
 
-      await expect(repository.delete('nonexistent', 'user123'))
-        .rejects.toThrow('相册不存在或无权限操作');
+      await expect(repository.delete('nonexistent', 'user123')).rejects.toThrow(
+        '相册不存在或无权限操作',
+      );
     });
   });
 
@@ -275,7 +312,10 @@ describe('AlbumRepository', () => {
     it('应该返回true当相册属于用户', async () => {
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(mockAlbum);
 
-      const result = await repository.isAlbumBelongsToUser('123456789', 'user123');
+      const result = await repository.isAlbumBelongsToUser(
+        '123456789',
+        'user123',
+      );
 
       expect(result).toBe(true);
       expect(albumRepository.findOneBy).toHaveBeenCalledWith({
@@ -287,7 +327,10 @@ describe('AlbumRepository', () => {
     it('应该返回false当相册不属于用户', async () => {
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(null);
 
-      const result = await repository.isAlbumBelongsToUser('123456789', 'otheruser');
+      const result = await repository.isAlbumBelongsToUser(
+        '123456789',
+        'otheruser',
+      );
 
       expect(result).toBe(false);
     });
@@ -301,24 +344,28 @@ describe('AlbumRepository', () => {
       jest.spyOn(albumRepository, 'findOneBy').mockResolvedValue(null);
       mockCacheService.get.mockResolvedValue(undefined);
 
-      let result1 = await repository.findById('nonexistent');
+      const result1 = await repository.findById('nonexistent');
       expect(result1).toBeNull();
 
       // 验证数据库被调用
-      expect(albumRepository.findOneBy).toHaveBeenCalledWith({ id: 'nonexistent' });
+      expect(albumRepository.findOneBy).toHaveBeenCalledWith({
+        id: 'nonexistent',
+      });
 
       // 验证空值被缓存
       expect(mockCacheService.set).toHaveBeenCalledWith(
         cacheKey,
         NULL_CACHE_VALUES.NULL_PLACEHOLDER,
-        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE)
+        TTLUtils.toSeconds(TTL_CONFIGS.NULL_CACHE),
       );
 
       // 第二次查询 - 从缓存获取空值标记
       jest.spyOn(albumRepository, 'findOneBy').mockClear();
-      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+      mockCacheService.get.mockResolvedValue(
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+      );
 
-      let result2 = await repository.findById('nonexistent');
+      const result2 = await repository.findById('nonexistent');
       expect(result2).toBeNull();
 
       // 验证数据库不再被调用
@@ -329,7 +376,9 @@ describe('AlbumRepository', () => {
       const cacheKey = 'repo:album:id:nonexistent';
 
       // 模拟缓存中存储了空值标记
-      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+      mockCacheService.get.mockResolvedValue(
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+      );
 
       const result = await repository.findById('nonexistent');
 
@@ -343,22 +392,28 @@ describe('AlbumRepository', () => {
       const updateData = { albumName: '新名称' };
 
       // 先缓存空值
-      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+      mockCacheService.get.mockResolvedValue(
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+      );
 
       // 尝试更新不存在的相册
-      await expect(repository.update('nonexistent', 'user123', updateData))
-        .rejects.toThrow('相册不存在或无权限操作');
+      await expect(
+        repository.update('nonexistent', 'user123', updateData),
+      ).rejects.toThrow('相册不存在或无权限操作');
     });
 
     it('应该在删除时清理空值缓存', async () => {
       const cacheKey = 'repo:album:id:nonexistent';
 
       // 先缓存空值
-      mockCacheService.get.mockResolvedValue(NULL_CACHE_VALUES.NULL_PLACEHOLDER);
+      mockCacheService.get.mockResolvedValue(
+        NULL_CACHE_VALUES.NULL_PLACEHOLDER,
+      );
 
       // 尝试删除不存在的相册
-      await expect(repository.delete('nonexistent', 'user123'))
-        .rejects.toThrow('相册不存在或无权限操作');
+      await expect(repository.delete('nonexistent', 'user123')).rejects.toThrow(
+        '相册不存在或无权限操作',
+      );
     });
   });
 });

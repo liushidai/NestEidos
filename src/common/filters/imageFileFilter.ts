@@ -50,7 +50,9 @@ export interface ImageFileFilterOptions {
  * - 为未来扩展预留接口
  * - 与现有API保持兼容
  */
-export function createSimplifiedImageFileFilter(options: ImageFileFilterOptions) {
+export function createSimplifiedImageFileFilter(
+  options: ImageFileFilterOptions,
+) {
   const { maxSize, strict = true } = options;
 
   return (
@@ -73,7 +75,9 @@ export function createSimplifiedImageFileFilter(options: ImageFileFilterOptions)
 
       // 3. 扩展名白名单检查（基于文件名声明）
       if (!ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
-        const supportedExts = Array.from(ALLOWED_IMAGE_EXTENSIONS).sort().join(', ');
+        const supportedExts = Array.from(ALLOWED_IMAGE_EXTENSIONS)
+          .sort()
+          .join(', ');
         return callback(new UnsupportedFileTypeError(extension), false);
       }
 
@@ -81,19 +85,24 @@ export function createSimplifiedImageFileFilter(options: ImageFileFilterOptions)
       // 4. HTTP MIME类型声明检查（轻量，基于客户端声明）
       const declaredMime = file.mimetype?.toLowerCase();
       if (!declaredMime || !isSupportedMimeType(declaredMime)) {
-        return callback(new UnsupportedFileTypeError(undefined, declaredMime), false);
+        return callback(
+          new UnsupportedFileTypeError(undefined, declaredMime),
+          false,
+        );
       }
 
       // 5. 严格模式：扩展名与声明MIME匹配检查（防止明显伪造）
       if (strict && !isMimeTypeMatchingExtension(declaredMime, extension)) {
-        return callback(new FileContentMismatchError(extension, declaredMime), false);
+        return callback(
+          new FileContentMismatchError(extension, declaredMime),
+          false,
+        );
       }
 
       // ✅ 所有轻量校验通过，文件将被接受
       // 🔥 注意：实际文件内容的深度验证（真实MIME检测、大小限制等）
       //      将由自定义 ValidatedMemoryStorage 在流式处理阶段完成
       return callback(null, true);
-
     } catch (error) {
       console.error('文件过滤器处理过程中发生错误:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';

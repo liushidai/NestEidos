@@ -43,7 +43,9 @@ describe('AdminGuard', () => {
         }),
       } as ExecutionContext;
 
-      expect(() => guard.canActivate(mockContext)).toThrow(UnauthorizedException);
+      expect(() => guard.canActivate(mockContext)).toThrow(
+        UnauthorizedException,
+      );
       expect(() => guard.canActivate(mockContext)).toThrow('用户未认证');
     });
 
@@ -62,7 +64,9 @@ describe('AdminGuard', () => {
         }),
       } as ExecutionContext;
 
-      expect(() => guard.canActivate(mockContext)).toThrow(UnauthorizedException);
+      expect(() => guard.canActivate(mockContext)).toThrow(
+        UnauthorizedException,
+      );
       expect(() => guard.canActivate(mockContext)).toThrow('需要管理员权限');
     });
 
@@ -81,7 +85,9 @@ describe('AdminGuard', () => {
         }),
       } as ExecutionContext;
 
-      expect(() => guard.canActivate(mockContext)).toThrow(UnauthorizedException);
+      expect(() => guard.canActivate(mockContext)).toThrow(
+        UnauthorizedException,
+      );
       expect(() => guard.canActivate(mockContext)).toThrow('需要管理员权限');
     });
   });

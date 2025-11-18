@@ -72,7 +72,8 @@ export class HealthController {
     } catch (error) {
       status.status = 'unhealthy';
       status.database = 'disconnected';
-      status.error = error instanceof Error ? error.message : 'Database connection failed';
+      status.error =
+        error instanceof Error ? error.message : 'Database connection failed';
     }
 
     // 添加内存使用情况
@@ -125,9 +126,9 @@ export class HealthController {
         },
         system: {
           nodeVersion: 'v18.19.0',
-            platform: 'linux',
-            arch: 'x64',
-            pid: 1,
+          platform: 'linux',
+          arch: 'x64',
+          pid: 1,
         },
       },
     },

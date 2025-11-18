@@ -1,11 +1,11 @@
+import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Request
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AlbumService } from './album.service';
 import { QueryAlbumDto } from './dto/query-album.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
@@ -24,9 +24,27 @@ export class AlbumsController {
 
   @Get()
   @ApiOperation({ summary: '分页查询相册' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: '页码，从1开始', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: '每页数量', example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String, description: '相册名称模糊搜索', example: '我的' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: '页码，从1开始',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: '每页数量',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: '相册名称模糊搜索',
+    example: '我的',
+  })
   @ApiResponse({
     status: 200,
     description: '查询成功',
@@ -52,7 +70,10 @@ export class AlbumsController {
     status: 401,
     description: '认证令牌无效或已过期',
   })
-  async findAll(@Query() queryDto: QueryAlbumDto, @Request() req: AuthenticatedRequest) {
+  async findAll(
+    @Query() queryDto: QueryAlbumDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const userId = req.user.userId;
     const result = await this.albumService.findByUserId(userId, queryDto);
     return result;

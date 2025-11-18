@@ -15,22 +15,28 @@ export interface AppConfig {
  * 应用配置
  * 包含文件上传相关配置
  */
-export default registerAs('app', (): AppConfig => ({
-  // 应用基础配置
-  port: parseInt(process.env.PORT || '3000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
+export default registerAs(
+  'app',
+  (): AppConfig => ({
+    // 应用基础配置
+    port: Number.parseInt(process.env.PORT || '3000', 10),
+    nodeEnv: process.env.NODE_ENV || 'development',
 
-  // 文件上传配置
-  upload: {
-    // 最大文件大小（字节）
-    maxFileSize: parseInt(process.env.UPLOAD_MAX_FILE_SIZE || `${100 * 1024 * 1024}`, 10), // 默认 100MB
+    // 文件上传配置
+    upload: {
+      // 最大文件大小（字节）
+      maxFileSize: Number.parseInt(
+        process.env.UPLOAD_MAX_FILE_SIZE || `${100 * 1024 * 1024}`,
+        10,
+      ), // 默认 100MB
 
-    // 其他上传配置（为未来扩展预留）
-    // allowedMimeTypes: process.env.UPLOAD_ALLOWED_MIME_TYPES?.split(',') || [],
-    // maxFilesPerRequest: parseInt(process.env.UPLOAD_MAX_FILES_PER_REQUEST, 10) || 10,
-    // tempDir: process.env.UPLOAD_TEMP_DIR || '/tmp/uploads',
-  },
-}));
+      // 其他上传配置（为未来扩展预留）
+      // allowedMimeTypes: process.env.UPLOAD_ALLOWED_MIME_TYPES?.split(',') || [],
+      // maxFilesPerRequest: parseInt(process.env.UPLOAD_MAX_FILES_PER_REQUEST, 10) || 10,
+      // tempDir: process.env.UPLOAD_TEMP_DIR || '/tmp/uploads',
+    },
+  }),
+);
 
 /**
  * 配置验证模式

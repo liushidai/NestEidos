@@ -9,13 +9,25 @@ export const redisConfig: ConfigFactory = registerAs('redis', () => ({
   keyPrefix: process.env.REDIS_KEY_PREFIX || 'nest_eidos:',
 
   // 连接池配置
-  maxRetriesPerRequest: Number.parseInt(process.env.REDIS_MAX_RETRIES || '3', 10),
-  retryDelayOnFailover: Number.parseInt(process.env.REDIS_RETRY_DELAY || '100', 10),
+  maxRetriesPerRequest: Number.parseInt(
+    process.env.REDIS_MAX_RETRIES || '3',
+    10,
+  ),
+  retryDelayOnFailover: Number.parseInt(
+    process.env.REDIS_RETRY_DELAY || '100',
+    10,
+  ),
   enableReadyCheck: process.env.REDIS_ENABLE_READY_CHECK !== 'false',
 
   // 超时配置（毫秒）
-  connectTimeout: Number.parseInt(process.env.REDIS_CONNECT_TIMEOUT || '10000', 10),
-  commandTimeout: Number.parseInt(process.env.REDIS_COMMAND_TIMEOUT || '5000', 10),
+  connectTimeout: Number.parseInt(
+    process.env.REDIS_CONNECT_TIMEOUT || '10000',
+    10,
+  ),
+  commandTimeout: Number.parseInt(
+    process.env.REDIS_COMMAND_TIMEOUT || '5000',
+    10,
+  ),
 
   // 连接池配置
   family: 4, // IPv4
@@ -24,5 +36,8 @@ export const redisConfig: ConfigFactory = registerAs('redis', () => ({
 
   // 高级配置
   maxMemoryPolicy: process.env.REDIS_MAX_MEMORY_POLICY || 'allkeys-lru',
-  slowLogLogSlowerThan: Number.parseInt(process.env.REDIS_SLOW_LOG_SLOWER_THAN || '10000', 10),
+  slowLogLogSlowerThan: Number.parseInt(
+    process.env.REDIS_SLOW_LOG_SLOWER_THAN || '10000',
+    10,
+  ),
 }));

@@ -12,7 +12,12 @@ import { AuthModule } from '../auth/auth.module';
 import { CacheModule } from '@/cache';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), AuthModule, CacheModule, ConfigModule],
+  imports: [
+    TypeOrmModule.forFeature([User]),
+    AuthModule,
+    CacheModule,
+    ConfigModule,
+  ],
   controllers: [ProtectedUserController, AdminController, AdminUsersController],
   providers: [UserService, UserRepository, AdminGuard],
   exports: [UserService, UserRepository],

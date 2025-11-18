@@ -19,7 +19,8 @@ export class CacheService implements OnModuleDestroy {
   ) {
     this.redis = redis;
     // 使用配置中的 REDIS_KEY_PREFIX，如果没有配置则使用默认值
-    this.keyPrefix = this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
+    this.keyPrefix =
+      this.configService.get<string>('redis.keyPrefix') || 'nest_eidos:';
   }
 
   async onModuleDestroy() {
@@ -60,7 +61,11 @@ export class CacheService implements OnModuleDestroy {
    * @param value 缓存值
    * @param ttl 过期时间（秒、字符串或TTLConfig），默认使用默认TTL
    */
-  async set<T>(key: string, value: T, ttl?: number | string | TTLConfig): Promise<void> {
+  async set<T>(
+    key: string,
+    value: T,
+    ttl?: number | string | TTLConfig,
+  ): Promise<void> {
     try {
       const fullKey = this.keyPrefix + key;
       const serializedValue = JSON.stringify(value);
@@ -74,7 +79,9 @@ export class CacheService implements OnModuleDestroy {
         await this.redis.set(fullKey, serializedValue);
       }
 
-      this.logger.debug(`设置缓存: ${key}, TTL: ${normalizedTtl || 'default'}s`);
+      this.logger.debug(
+        `设置缓存: ${key}, TTL: ${normalizedTtl || 'default'}s`,
+      );
     } catch (error) {
       this.logger.error(`设置缓存失败: ${key}`, error);
     }
@@ -105,7 +112,9 @@ export class CacheService implements OnModuleDestroy {
 
       if (keys.length > 0) {
         await this.redis.del(keys);
-        this.logger.debug(`删除缓存模式: ${pattern}, 删除了 ${keys.length} 个键`);
+        this.logger.debug(
+          `删除缓存模式: ${pattern}, 删除了 ${keys.length} 个键`,
+        );
       }
     } catch (error) {
       this.logger.error(`删除缓存模式失败: ${pattern}`, error);
@@ -193,13 +202,17 @@ export class CacheService implements OnModuleDestroy {
       // 简单解析时间字符串，如 "1h", "30m", "60s"
       const match = ttl.match(/^(\d+)([smhd])$/);
       if (match) {
-        const value = parseInt(match[1], 10);
+        const value = Number.parseInt(match[1], 10);
         const unit = match[2];
         switch (unit) {
-          case 's': return value;
-          case 'm': return value * 60;
-          case 'h': return value * 3600;
-          case 'd': return value * 86400;
+          case 's':
+            return value;
+          case 'm':
+            return value * 60;
+          case 'h':
+            return value * 3600;
+          case 'd':
+            return value * 86400;
         }
       }
       // 如果无法解析，返回默认值
@@ -207,11 +220,11 @@ export class CacheService implements OnModuleDestroy {
       return TTLUtils.toSeconds(TTL_CONFIGS.DEFAULT_CACHE);
     }
 
-    if (typeof ttl === 'object' && TTLUtils.isValidTTL(ttl)) {
+    if (typeof ttl === 'object' && ttl !== null && TTLUtils.isValidTTL(ttl)) {
       return TTLUtils.toSeconds(ttl);
     }
 
-    this.logger.warn(`无效的TTL格式: ${ttl}，使用默认TTL`);
+    this.logger.warn(`无效的TTL格式: ${JSON.stringify(ttl)}，使用默认TTL`);
     return TTLUtils.toSeconds(TTL_CONFIGS.DEFAULT_CACHE);
   }
 
@@ -219,7 +232,11 @@ export class CacheService implements OnModuleDestroy {
    * 健康检查
    * @returns 健康状态
    */
-  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; latency?: number; error?: string }> {
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    latency?: number;
+    error?: string;
+  }> {
     const testKey = this.keyPrefix + `health_check_${Date.now()}`;
     const testValue = 'health_check_value';
 
@@ -243,9 +260,12 @@ export class CacheService implements OnModuleDestroy {
       } else {
         return { status: 'unhealthy', error: '缓存数据不一致' };
       }
-    } catch (error) {
-      this.logger.error('缓存健康检查失败', error.stack);
-      return { status: 'unhealthy', error: (error as Error).message };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('缓存健康检查失败', errorStack);
+      return { status: 'unhealthy', error: errorMessage };
     }
   }
 }

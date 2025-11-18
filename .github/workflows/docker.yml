@@ -7,18 +7,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Image tag (optional)'
-        required: false
-        default: 'latest'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 构建和推送 Docker 镜像
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -26,11 +20,19 @@ jobs:
       contents: read
       packages: write
 
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -48,52 +50,29 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=${{ github.event.inputs.tag || 'latest' }}
-          flavor: |
-            latest=false
-            prefix=branch-
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          buildkitd-flags: --allow-insecure-entitlement security.insecure
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           target: runner
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
 
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          format: spdx-json
-          output-file: sbom.spdx.json
+      - name: Output image
+        id: image
+        run: |
+          # 使用第一个标签作为镜像标识
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "image=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "📦 Built image: ${IMAGE_TAG}"
 
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.spdx.json
-
-  # 安全扫描
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -107,7 +86,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.version }}
+          image-ref: ${{ needs.build.outputs.image }}
           format: 'sarif'
           output: 'trivy-results.sarif'
 
@@ -116,7 +95,6 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-  # 镜像信息
   image-info:
     name: Image Information
     runs-on: ubuntu-latest
@@ -124,17 +102,15 @@ jobs:
     if: github.event_name != 'pull_request'
 
     steps:
-      - name: Get image size
+      - name: Get image information
         run: |
-          IMAGE_DIGEST=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.version }} --format '{{.Manifest}}')
-          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.version }}"
-          echo "Digest: $IMAGE_DIGEST"
+          echo "🔍 Image Information"
+          echo "Image: ${{ needs.build.outputs.image }}"
+          echo "Digest: ${{ needs.build.outputs.digest }}"
 
-          # 获取镜像大小
-          SIZE=$(docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.version }} --format '{{.ManifestDescriptor}}' | jq -r '.size')
-          echo "Size: $(( SIZE / 1024 / 1024 )) MB"
+          # 获取镜像详情
+          docker buildx imagetools inspect ${{ needs.build.outputs.image }}
 
-  # 部署到测试环境 (可选)
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -146,6 +122,7 @@ jobs:
       - name: Deploy to staging
         run: |
           echo "🚀 Deploying to staging environment..."
-          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.version }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
+          echo "Digest: ${{ needs.build.outputs.digest }}"
           echo "Add your deployment logic here"
           echo "✅ Deployment completed"

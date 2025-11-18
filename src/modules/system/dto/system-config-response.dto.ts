@@ -32,7 +32,17 @@ export class SystemConfigResponseDto {
 
   @ApiProperty({
     description: '允许的图片格式列表',
-    example: ['JPEG', 'PNG', 'GIF', 'WebP', 'AVIF', 'BMP', 'SVG', 'HEIF', 'HEIC'],
+    example: [
+      'JPEG',
+      'PNG',
+      'GIF',
+      'WebP',
+      'AVIF',
+      'BMP',
+      'SVG',
+      'HEIF',
+      'HEIC',
+    ],
     type: 'array',
     items: {
       type: 'string',
@@ -66,7 +76,26 @@ export class SystemConfigResponseDto {
 
   @ApiProperty({
     description: '允许的文件扩展名列表',
-    example: ['jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif', 'webp', 'avif', 'avifs', 'bmp', 'dib', 'svg', 'svgz', 'heif', 'hif', 'heic', 'heifs'],
+    example: [
+      'jpg',
+      'jpeg',
+      'jfif',
+      'pjpeg',
+      'pjp',
+      'png',
+      'gif',
+      'webp',
+      'avif',
+      'avifs',
+      'bmp',
+      'dib',
+      'svg',
+      'svgz',
+      'heif',
+      'hif',
+      'heic',
+      'heifs',
+    ],
     type: 'array',
     items: {
       type: 'string',

@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Image } from '../entities/image.entity';
-import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  CacheKeyUtils,
+} from '../../../cache';
 
 @Injectable()
 export class ImageRepository {
@@ -50,7 +55,9 @@ export class ImageRepository {
         // 缓存空值，防止缓存穿透
         const nullMarker = TTLUtils.toCacheableNullValue<Image>();
         await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
-        this.logger.debug(`缓存图片空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存图片空值标记（缓存穿透防护）: ${id}, TTL: ${this.NULL_CACHE_TTL}秒`,
+        );
       }
 
       return image;
@@ -65,22 +72,32 @@ export class ImageRepository {
    */
   async findByIdAndUserId(id: string, userId: string): Promise<Image | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKey('image', 'user_image', `${userId}:${id}`);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey(
+        'image',
+        'user_image',
+        `${userId}:${id}`,
+      );
 
       // 尝试从缓存获取
       const cachedImage = await this.cacheService.get<Image>(cacheKey);
       if (cachedImage !== null && cachedImage !== undefined) {
         // 检查是否为缓存的空值标记
         if (TTLUtils.isNullCacheValue(cachedImage)) {
-          this.logger.debug(`从缓存获取用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}`);
+          this.logger.debug(
+            `从缓存获取用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}`,
+          );
           return null;
         }
-        this.logger.debug(`从缓存获取用户图片: userId=${userId}, imageId=${id}`);
+        this.logger.debug(
+          `从缓存获取用户图片: userId=${userId}, imageId=${id}`,
+        );
         return cachedImage;
       }
 
       // 缓存未命中，从数据库获取
-      this.logger.debug(`从数据库获取用户图片: userId=${userId}, imageId=${id}`);
+      this.logger.debug(
+        `从数据库获取用户图片: userId=${userId}, imageId=${id}`,
+      );
       const image = await this.imageRepository.findOne({
         where: { id, userId },
         relations: ['user', 'album'],
@@ -89,17 +106,24 @@ export class ImageRepository {
       // 缓存结果（无论是否存在都缓存）
       if (image) {
         await this.cacheService.set(cacheKey, image, this.CACHE_TTL);
-        this.logger.debug(`缓存用户图片数据: userId=${userId}, imageId=${id}, TTL: ${this.CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存用户图片数据: userId=${userId}, imageId=${id}, TTL: ${this.CACHE_TTL}秒`,
+        );
       } else {
         // 缓存空值，防止缓存穿透
         const nullMarker = TTLUtils.toCacheableNullValue<Image>();
         await this.cacheService.set(cacheKey, nullMarker, this.NULL_CACHE_TTL);
-        this.logger.debug(`缓存用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`);
+        this.logger.debug(
+          `缓存用户图片空值标记（缓存穿透防护）: userId=${userId}, imageId=${id}, TTL: ${this.NULL_CACHE_TTL}秒`,
+        );
       }
 
       return image;
     } catch (error) {
-      this.logger.error(`根据用户ID和图片ID查找图片失败: userId=${userId}, imageId=${id}`, error.stack);
+      this.logger.error(
+        `根据用户ID和图片ID查找图片失败: userId=${userId}, imageId=${id}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -107,7 +131,14 @@ export class ImageRepository {
   /**
    * 分页查询用户的图片（不使用缓存，因为分页数据变化频繁）
    */
-  async findByUserId(userId: string, page: number, limit: number, search?: string, albumId?: string, mimeType?: string[]): Promise<{
+  async findByUserId(
+    userId: string,
+    page: number,
+    limit: number,
+    search?: string,
+    albumId?: string,
+    mimeType?: string[],
+  ): Promise<{
     images: Image[];
     total: number;
     page: number;
@@ -129,7 +160,9 @@ export class ImageRepository {
 
       // 添加搜索条件
       if (search) {
-        queryBuilder.andWhere('image.title LIKE :search', { search: `%${search}%` });
+        queryBuilder.andWhere('image.title LIKE :search', {
+          search: `%${search}%`,
+        });
       }
 
       if (albumId) {
@@ -137,14 +170,18 @@ export class ImageRepository {
       }
 
       if (mimeType && mimeType.length > 0) {
-        queryBuilder.andWhere('image.imageMimeType IN (:...mimeType)', { mimeType });
+        queryBuilder.andWhere('image.imageMimeType IN (:...mimeType)', {
+          mimeType,
+        });
       }
 
       // 查询总数和数据
       const [images, total] = await queryBuilder.getManyAndCount();
       const totalPages = Math.ceil(total / limit);
 
-      this.logger.debug(`分页查询用户图片: userId=${userId}, page=${page}, limit=${limit}, total=${total}`);
+      this.logger.debug(
+        `分页查询用户图片: userId=${userId}, page=${page}, limit=${limit}, total=${total}`,
+      );
 
       return {
         images,
@@ -154,7 +191,10 @@ export class ImageRepository {
         totalPages,
       };
     } catch (error) {
-      this.logger.error(`分页查询用户图片失败: userId=${userId}, page=${page}, limit=${limit}`, error.stack);
+      this.logger.error(
+        `分页查询用户图片失败: userId=${userId}, page=${page}, limit=${limit}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -167,7 +207,9 @@ export class ImageRepository {
       const image = this.imageRepository.create(imageData);
       const savedImage = await this.imageRepository.save(image);
 
-      this.logger.log(`创建图片记录成功: ${savedImage.id} (userId: ${savedImage.userId})`);
+      this.logger.log(
+        `创建图片记录成功: ${savedImage.id} (userId: ${savedImage.userId})`,
+      );
       return savedImage;
     } catch (error) {
       this.logger.error(`创建图片记录失败: ${imageData.userId}`, error.stack);
@@ -178,7 +220,11 @@ export class ImageRepository {
   /**
    * 更新图片信息（自动清理缓存）
    */
-  async update(id: string, userId: string, imageData: Partial<Image>): Promise<{ oldImage: Image | null; updatedImage: Image }> {
+  async update(
+    id: string,
+    userId: string,
+    imageData: Partial<Image>,
+  ): Promise<{ oldImage: Image | null; updatedImage: Image }> {
     try {
       // 先查询原始数据
       const oldImage = await this.findByIdAndUserId(id, userId);
@@ -196,7 +242,10 @@ export class ImageRepository {
       this.logger.log(`更新图片成功: ${updatedImage.title} (id: ${id})`);
       return { oldImage, updatedImage };
     } catch (error) {
-      this.logger.error(`更新图片失败: id=${id}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `更新图片失败: id=${id}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -218,7 +267,10 @@ export class ImageRepository {
 
       this.logger.log(`删除图片成功: ${image.title} (id: ${id})`);
     } catch (error) {
-      this.logger.error(`删除图片失败: id=${id}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `删除图片失败: id=${id}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -226,7 +278,10 @@ export class ImageRepository {
   /**
    * 检查图片是否属于指定用户（实时查询，不使用缓存）
    */
-  async isImageBelongsToUser(imageId: string, userId: string): Promise<boolean> {
+  async isImageBelongsToUser(
+    imageId: string,
+    userId: string,
+  ): Promise<boolean> {
     try {
       const image = await this.imageRepository.findOneBy({
         id: imageId,
@@ -234,16 +289,21 @@ export class ImageRepository {
       });
       return !!image;
     } catch (error) {
-      this.logger.error(`检查图片归属失败: imageId=${imageId}, userId=${userId}`, error.stack);
+      this.logger.error(
+        `检查图片归属失败: imageId=${imageId}, userId=${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
 
-  
   /**
    * 批量更新图片的相册ID（用于相册删除时）
    */
-  async updateAlbumId(oldAlbumId: string, newAlbumId: string = '0'): Promise<void> {
+  async updateAlbumId(
+    oldAlbumId: string,
+    newAlbumId: string = '0',
+  ): Promise<void> {
     try {
       await this.imageRepository
         .createQueryBuilder()
@@ -252,9 +312,14 @@ export class ImageRepository {
         .where('albumId = :oldAlbumId', { oldAlbumId })
         .execute();
 
-      this.logger.log(`批量更新图片相册ID成功: oldAlbumId=${oldAlbumId}, newAlbumId=${newAlbumId}`);
+      this.logger.log(
+        `批量更新图片相册ID成功: oldAlbumId=${oldAlbumId}, newAlbumId=${newAlbumId}`,
+      );
     } catch (error) {
-      this.logger.error(`批量更新图片相册ID失败: oldAlbumId=${oldAlbumId}`, error.stack);
+      this.logger.error(
+        `批量更新图片相册ID失败: oldAlbumId=${oldAlbumId}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -262,19 +327,33 @@ export class ImageRepository {
   /**
    * 清理图片相关缓存
    */
-  private async clearImageCache(imageId: string, userId: string): Promise<void> {
+  private async clearImageCache(
+    imageId: string,
+    userId: string,
+  ): Promise<void> {
     try {
       // 清理图片ID缓存
-      const imageIdCacheKey = CacheKeyUtils.buildRepositoryKey('image', 'id', imageId);
+      const imageIdCacheKey = CacheKeyUtils.buildRepositoryKey(
+        'image',
+        'id',
+        imageId,
+      );
       await this.cacheService.delete(imageIdCacheKey);
 
       // 清理用户图片缓存
-      const userImageCacheKey = CacheKeyUtils.buildRepositoryKey('image', 'user_image', `${userId}:${imageId}`);
+      const userImageCacheKey = CacheKeyUtils.buildRepositoryKey(
+        'image',
+        'user_image',
+        `${userId}:${imageId}`,
+      );
       await this.cacheService.delete(userImageCacheKey);
 
       this.logger.debug(`清理图片缓存: imageId=${imageId}, userId=${userId}`);
     } catch (error) {
-      this.logger.warn(`清理图片缓存失败: imageId=${imageId}, userId=${userId}`, error.stack);
+      this.logger.warn(
+        `清理图片缓存失败: imageId=${imageId}, userId=${userId}`,
+        error.stack,
+      );
       // 缓存清理失败不应影响主要功能
     }
   }

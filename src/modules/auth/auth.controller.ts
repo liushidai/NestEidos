@@ -1,5 +1,22 @@
-import { Controller, Post, Body, Get, UseGuards, Request, HttpCode, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
@@ -48,7 +65,10 @@ export class AuthController {
   })
   async register(@Body() registerUserDto: RegisterUserDto): Promise<User> {
     // 检查是否开启用户注册功能
-    const enableUserRegistration = this.configService.get<boolean>('ENABLE_USER_REGISTRATION', true);
+    const enableUserRegistration = this.configService.get<boolean>(
+      'ENABLE_USER_REGISTRATION',
+      true,
+    );
     if (!enableUserRegistration) {
       throw new ForbiddenException('注册功能已关闭，请联系管理员创建账户');
     }
@@ -68,7 +88,8 @@ export class AuthController {
     description: '登录成功',
     schema: {
       example: {
-        token: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        token:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         expires_in: 3600,
       },
     },
@@ -97,9 +118,7 @@ export class AuthController {
     description: '认证令牌无效或已过期',
   })
   @UseGuards(TokenGuard)
-  async logout(
-    @Request() req: AuthenticatedRequest,
-  ): Promise<void> {
+  async logout(@Request() req: AuthenticatedRequest): Promise<void> {
     // 从请求头中提取 token（TokenGuard 已经验证了 token 的有效性）
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -144,7 +163,7 @@ export class AuthController {
     schema: {
       example: {
         success: true,
-        message: '密码修改成功'
+        message: '密码修改成功',
       },
     },
   })

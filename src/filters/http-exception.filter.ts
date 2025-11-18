@@ -18,18 +18,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status = exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const exceptionResponse = exception instanceof HttpException
-      ? exception.getResponse()
-      : { message: '服务器内部错误' };
+    const exceptionResponse =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : { message: '服务器内部错误' };
 
     let message = '服务器内部错误';
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
-    } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+    } else if (
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null
+    ) {
       const responseObj = exceptionResponse as any;
       message = responseObj.message || responseObj.error || message;
       if (Array.isArray(message)) {

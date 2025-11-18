@@ -7,7 +7,10 @@
  * 文件上传基础错误类
  */
 export abstract class FileUploadError extends Error {
-  constructor(message: string, public readonly code: string) {
+  constructor(
+    message: string,
+    public readonly code: string,
+  ) {
     super(message);
     this.name = this.constructor.name;
   }
@@ -45,7 +48,10 @@ export class FileSizeExceededError extends FileValidationError {
   constructor(actualSize: number, maxSize: number) {
     const actualMB = (actualSize / 1024 / 1024).toFixed(1);
     const maxMB = (maxSize / 1024 / 1024).toFixed(1);
-    super(`文件过大：${actualMB}MB，最大允许：${maxMB}MB`, 'FILE_SIZE_EXCEEDED');
+    super(
+      `文件过大：${actualMB}MB，最大允许：${maxMB}MB`,
+      'FILE_SIZE_EXCEEDED',
+    );
   }
 }
 
@@ -54,7 +60,10 @@ export class FileSizeExceededError extends FileValidationError {
  */
 export class FileContentMismatchError extends FileValidationError {
   constructor(extension: string, detectedType: string) {
-    super(`文件扩展名与内容不匹配: .${extension} vs ${detectedType}`, 'FILE_CONTENT_MISMATCH');
+    super(
+      `文件扩展名与内容不匹配: .${extension} vs ${detectedType}`,
+      'FILE_CONTENT_MISMATCH',
+    );
   }
 }
 
@@ -76,7 +85,6 @@ export class MissingExtensionError extends FileValidationError {
   }
 }
 
-
 /**
  * 文件内容为空错误
  */
@@ -91,7 +99,10 @@ export class EmptyFileContentError extends FileValidationError {
  */
 export class FileTypeRecognitionError extends FileValidationError {
   constructor() {
-    super('无法识别文件类型，可能不是有效的图片文件', 'FILE_TYPE_RECOGNITION_FAILED');
+    super(
+      '无法识别文件类型，可能不是有效的图片文件',
+      'FILE_TYPE_RECOGNITION_FAILED',
+    );
   }
 }
 
@@ -100,7 +111,10 @@ export class FileTypeRecognitionError extends FileValidationError {
  */
 export class FileValidationSystemError extends FileValidationError {
   constructor(originalError?: string) {
-    super(`文件验证失败，请重试${originalError ? `: ${originalError}` : ''}`, 'FILE_VALIDATION_SYSTEM_ERROR');
+    super(
+      `文件验证失败，请重试${originalError ? `: ${originalError}` : ''}`,
+      'FILE_VALIDATION_SYSTEM_ERROR',
+    );
   }
 }
 
@@ -120,4 +134,5 @@ export const FILE_UPLOAD_ERROR_CODES = {
   FILE_VALIDATION_SYSTEM_ERROR: 'FILE_VALIDATION_SYSTEM_ERROR',
 } as const;
 
-export type FileUploadErrorCode = typeof FILE_UPLOAD_ERROR_CODES[keyof typeof FILE_UPLOAD_ERROR_CODES];
+export type FileUploadErrorCode =
+  (typeof FILE_UPLOAD_ERROR_CODES)[keyof typeof FILE_UPLOAD_ERROR_CODES];

@@ -1,11 +1,11 @@
+import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Request
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ImageService } from './image.service';
 import { QueryImageDto } from './dto/query-image.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
@@ -24,11 +24,41 @@ export class ImagesController {
 
   @Get()
   @ApiOperation({ summary: '分页查询图片' })
-  @ApiQuery({ name: 'page', required: false, type: String, description: '页码，从1开始', example: '1' })
-  @ApiQuery({ name: 'limit', required: false, type: String, description: '每页数量', example: '10' })
-  @ApiQuery({ name: 'search', required: false, type: String, description: '图片标题模糊搜索', example: '猫咪' })
-  @ApiQuery({ name: 'albumId', required: false, type: String, description: '相册ID筛选', example: '1234567890123456789' })
-  @ApiQuery({ name: 'mimeType', required: false, type: [String], description: '图片类型筛选（可重复）', example: ['image/jpeg', 'image/png'] })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: String,
+    description: '页码，从1开始',
+    example: '1',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: String,
+    description: '每页数量',
+    example: '10',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: '图片标题模糊搜索',
+    example: '猫咪',
+  })
+  @ApiQuery({
+    name: 'albumId',
+    required: false,
+    type: String,
+    description: '相册ID筛选',
+    example: '1234567890123456789',
+  })
+  @ApiQuery({
+    name: 'mimeType',
+    required: false,
+    type: [String],
+    description: '图片类型筛选（可重复）',
+    example: ['image/jpeg', 'image/png'],
+  })
   @ApiResponse({
     status: 200,
     description: '查询成功',
@@ -41,7 +71,8 @@ export class ImagesController {
             albumId: '1234567890123456789',
             originalName: 'photo.jpg',
             title: '一只可爱的猫咪',
-            imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+            imageHash:
+              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
             imageSize: 1024000,
             imageMimeType: 'image/jpeg',
             imageWidth: 1920,
@@ -52,7 +83,8 @@ export class ImagesController {
             avifKey: 'processed/1234567890123456790.avif',
             hasTransparency: false,
             isAnimated: false,
-            secureUrl: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+            secureUrl:
+              'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
             hasJpeg: true,
             hasWebp: true,
             hasAvif: true,
@@ -78,7 +110,10 @@ export class ImagesController {
     status: 401,
     description: '认证令牌无效或已过期',
   })
-  async findAll(@Query() queryDto: QueryImageDto, @Request() req: AuthenticatedRequest) {
+  async findAll(
+    @Query() queryDto: QueryImageDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const userId = req.user.userId;
     const result = await this.imageService.findByUserId(userId, queryDto);
     return result;

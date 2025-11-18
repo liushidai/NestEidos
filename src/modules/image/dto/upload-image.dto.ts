@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsIn, IsNumber, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  IsIn,
+  IsNumber,
+  IsDateString,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UploadImageDto {
@@ -38,7 +45,9 @@ export class UploadImageDto {
   })
   @IsString()
   @IsOptional()
-  @IsIn(['original', 'jpeg', 'webp', 'avif'], { message: 'defaultFormat 必须是 original, jpeg, webp, avif 之一' })
+  @IsIn(['original', 'jpeg', 'webp', 'avif'], {
+    message: 'defaultFormat 必须是 original, jpeg, webp, avif 之一',
+  })
   defaultFormat?: 'original' | 'jpeg' | 'webp' | 'avif';
 
   @ApiProperty({

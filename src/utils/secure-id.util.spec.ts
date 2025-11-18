@@ -6,7 +6,8 @@ describe('SecureIdUtil (Feistel PRP)', () => {
   let mockConfigService: jest.Mocked<ConfigService>;
 
   // 有效的 32 字节密钥（hex格式）
-  const validHexKey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+  const validHexKey =
+    '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
   const validBase64Key = Buffer.from(validHexKey, 'hex').toString('base64');
 
   beforeEach(() => {
@@ -63,7 +64,7 @@ describe('SecureIdUtil (Feistel PRP)', () => {
         BigInt('9999999999999999999999'), // 超出64位，但能处理（会截取低64位）
       ];
 
-      testIds.forEach(id => {
+      testIds.forEach((id) => {
         expect(secureIdUtil.validateEncodeDecodeRoundtrip(id)).toBe(true);
       });
     });
@@ -109,7 +110,8 @@ describe('SecureIdUtil (Feistel PRP)', () => {
 
       // 创建不同密钥的实例
       (SecureIdUtil as any).instance = null;
-      const differentKey = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+      const differentKey =
+        'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
 
       const differentConfigService = {
         get: jest.fn().mockReturnValue(`hex:${differentKey}`),
@@ -176,7 +178,9 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       const longString = 'a'.repeat(12); // 超过11字符
       expect(() => {
         secureIdUtil.decode(longString);
-      }).toThrow('Invalid encoded ID: length must be between 1 and 11 characters');
+      }).toThrow(
+        'Invalid encoded ID: length must be between 1 and 11 characters',
+      );
     });
 
     it('解码null应该抛出异常', () => {
@@ -372,7 +376,7 @@ describe('SecureIdUtil (Feistel PRP)', () => {
         BigInt('123456789012345678901234567890'), // 超出64位
       ];
 
-      testIds.forEach(id => {
+      testIds.forEach((id) => {
         const encoded = secureIdUtil.encode(id);
         const decoded = secureIdUtil.decode(encoded);
 
@@ -385,11 +389,11 @@ describe('SecureIdUtil (Feistel PRP)', () => {
     it('应该有良好的输出分布', () => {
       const sampleSize = 1000;
       const ids = Array.from({ length: sampleSize }, (_, i) => BigInt(i + 1));
-      const encodedIds = ids.map(id => secureIdUtil.encode(id));
+      const encodedIds = ids.map((id) => secureIdUtil.encode(id));
 
       // 计算第一个字符的分布
       const charCount = new Map<string, number>();
-      encodedIds.forEach(id => {
+      encodedIds.forEach((id) => {
         const firstChar = id[0] || '';
         charCount.set(firstChar, (charCount.get(firstChar) || 0) + 1);
       });
@@ -415,7 +419,9 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       const rate = count / (duration / 1000);
 
       expect(rate).toBeGreaterThan(5000); // Feistel 更复杂，期望较低的性能
-      console.log(`编码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
+      console.log(
+        `编码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`,
+      );
     });
 
     it('解码性能测试', () => {
@@ -434,7 +440,9 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       const rate = count / (duration / 1000);
 
       expect(rate).toBeGreaterThan(5000); // Feistel 更复杂，期望较低的性能
-      console.log(`解码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
+      console.log(
+        `解码 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`,
+      );
     });
 
     it('往返转换性能测试', () => {
@@ -451,7 +459,9 @@ describe('SecureIdUtil (Feistel PRP)', () => {
       const rate = count / (duration / 1000);
 
       expect(rate).toBeGreaterThan(2000); // 期望适中的往返性能
-      console.log(`往返转换 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
+      console.log(
+        `往返转换 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`,
+      );
     });
   });
 
@@ -466,7 +476,7 @@ describe('SecureIdUtil (Feistel PRP)', () => {
         1234567890123456789n, // 示例ID
       ];
 
-      realSnowflakeIds.forEach(id => {
+      realSnowflakeIds.forEach((id) => {
         const encoded = secureIdUtil.encode(id);
         const decoded = secureIdUtil.decode(encoded);
         expect(decoded).toBe(id);
@@ -487,7 +497,7 @@ describe('SecureIdUtil (Feistel PRP)', () => {
 
     it('应该防止通过编码推测原始ID', () => {
       const sequentialIds = [1n, 2n, 3n, 4n, 5n];
-      const encodedIds = sequentialIds.map(id => secureIdUtil.encode(id));
+      const encodedIds = sequentialIds.map((id) => secureIdUtil.encode(id));
 
       // 检查编码结果不显示递增规律
       for (let i = 1; i < encodedIds.length; i++) {

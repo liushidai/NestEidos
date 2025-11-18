@@ -9,7 +9,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiExcludeController } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiExcludeController,
+} from '@nestjs/swagger';
 import { ImageService } from '../image/image.service';
 import { StorageService } from '../../services/storage.service';
 import { SecureIdUtil } from '../../utils/secure-id.util';
@@ -98,7 +104,11 @@ export class ImageAccessController {
 
   @Get('*path')
   @ApiOperation({ summary: '获取图片（通用路由）' })
-  @ApiParam({ name: 'path', description: '完整路径', example: 'I3v4yvfBs0D.webp' })
+  @ApiParam({
+    name: 'path',
+    description: '完整路径',
+    example: 'I3v4yvfBs0D.webp',
+  })
   @ApiResponse({ status: 200, description: '成功返回图片' })
   @ApiResponse({ status: 404, description: '图片不存在或已过期' })
   async getImage(@Req() req: Request, @Res() res: Response) {
@@ -124,7 +134,11 @@ export class ImageAccessController {
     return this.handleImageAccess(key, ext, res);
   }
 
-  private async handleImageAccess(key: string, ext: string | null, res: Response) {
+  private async handleImageAccess(
+    key: string,
+    ext: string | null,
+    res: Response,
+  ) {
     try {
       // 1. 解码 secure ID 获取图片 ID
       let imageId: bigint;
@@ -203,17 +217,18 @@ export class ImageAccessController {
         res.set({
           'Content-Type': mimeType,
           'Cache-Control': 'public, max-age=31536000', // 缓存一年
-          'ETag': `"${image.imageHash}"`, // 使用图片哈希作为 ETag
+          ETag: `"${image.imageHash}"`, // 使用图片哈希作为 ETag
           'X-Image-ID': imageId.toString(),
           'X-Image-Format': ext || image.defaultFormat,
         });
 
         res.send(imageBuffer);
       } catch (error) {
-        this.logger.warn(`图片文件不存在于存储中: key=${imageKey}, error=${error.message}`);
+        this.logger.warn(
+          `图片文件不存在于存储中: key=${imageKey}, error=${error.message}`,
+        );
         return this.returnNotFoundImage(res, 'minimal_icon');
       }
-
     } catch (error) {
       this.logger.error(`处理图片访问失败: key=${key}, ext=${ext}`, error);
       return this.returnNotFoundImage(res, 'minimal_icon');
@@ -301,10 +316,14 @@ export class ImageAccessController {
   /**
    * 返回 404 图片
    */
-  private async returnNotFoundImage(res: Response, style: string = 'minimal_icon') {
+  private async returnNotFoundImage(
+    res: Response,
+    style: string = 'minimal_icon',
+  ) {
     try {
       // 直接使用内嵌的 SVG 内容
-      const svgContent = this.notFoundImages[style] || this.notFoundImages.minimal_icon;
+      const svgContent =
+        this.notFoundImages[style] || this.notFoundImages.minimal_icon;
 
       res.set({
         'Content-Type': 'image/svg+xml',

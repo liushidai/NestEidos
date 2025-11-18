@@ -87,7 +87,6 @@ export class TTLUtils {
     }
   }
 
-  
   /**
    * 将TTL配置转换为毫秒数
    */
@@ -137,12 +136,18 @@ export class TTLUtils {
     }
 
     // 检查字符串类型的空值标记
-    if (typeof value === 'string' && value === NULL_CACHE_VALUES.NULL_PLACEHOLDER) {
+    if (
+      typeof value === 'string' &&
+      value === NULL_CACHE_VALUES.NULL_PLACEHOLDER
+    ) {
       return true;
     }
 
     // 检查数字类型的空值标记
-    if (typeof value === 'number' && value === NULL_CACHE_VALUES.NULL_NUMBER_PLACEHOLDER) {
+    if (
+      typeof value === 'number' &&
+      value === NULL_CACHE_VALUES.NULL_NUMBER_PLACEHOLDER
+    ) {
       return true;
     }
 
@@ -184,7 +189,11 @@ export class CacheKeyUtils {
    * @param type 数据类型（如 'id', 'username'）
    * @param identifier 标识符
    */
-  static buildRepositoryKey(module: string, type: string, identifier: string): string {
+  static buildRepositoryKey(
+    module: string,
+    type: string,
+    identifier: string,
+  ): string {
     return `${CACHE_KEYS.REPOSITORY}:${module}:${type}:${identifier}`;
   }
 

@@ -10,18 +10,21 @@ import {
   Request,
   HttpCode,
   HttpStatus,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AlbumService } from './album.service';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { TokenGuard } from '../auth/guards/token.guard';
-import { Request as ExpressRequest } from 'express';
-
-interface AuthenticatedRequest extends ExpressRequest {
-  user?: any;
-}
+import { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
 
 @ApiTags('相册管理（需认证）')
 @Controller('album')
@@ -55,13 +58,15 @@ export class ProtectedAlbumController {
     status: 401,
     description: '认证令牌无效或已过期',
   })
-  async create(@Body() createAlbumDto: CreateAlbumDto, @Request() req: AuthenticatedRequest) {
+  async create(
+    @Body() createAlbumDto: CreateAlbumDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const userId = req.user.userId;
     const album = await this.albumService.create(createAlbumDto, userId);
     return album;
   }
 
-  
   @Get(':id')
   @ApiOperation({ summary: '获取相册详情' })
   @ApiParam({ name: 'id', description: '相册ID' })

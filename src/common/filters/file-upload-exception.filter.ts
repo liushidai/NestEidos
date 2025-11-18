@@ -27,7 +27,9 @@ import {
  * - 其他意外异常
  */
 @Catch()
-export class FileUploadExceptionFilter implements ExceptionFilter<FileUploadError> {
+export class FileUploadExceptionFilter
+  implements ExceptionFilter<FileUploadError>
+{
   private readonly logger = new Logger(FileUploadExceptionFilter.name);
 
   catch(exception: FileUploadError | Error, host: ArgumentsHost): void {
@@ -145,7 +147,10 @@ export class FileUploadExceptionFilter implements ExceptionFilter<FileUploadErro
         code: errorCode,
         type: errorType,
         message,
-        details: originalMessage && originalMessage !== message ? originalMessage : undefined,
+        details:
+          originalMessage && originalMessage !== message
+            ? originalMessage
+            : undefined,
       },
       timestamp: new Date().toISOString(),
     });

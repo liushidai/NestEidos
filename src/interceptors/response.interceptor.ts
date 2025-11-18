@@ -9,15 +9,23 @@ import { map } from 'rxjs/operators';
 import { ApiResponse } from '../interfaces/response.interface';
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
+export class ResponseInterceptor<T>
+  implements NestInterceptor<T, ApiResponse<T>>
+{
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<ApiResponse<T>> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 
     return next.handle().pipe(
       map((data) => ({
         code: response.statusCode || 200,
-        message: this.getSuccessMessage(request.method, request.route?.path),
+        message: this.getSuccessMessage(
+          request.method,
+          request.route?.path || request.url,
+        ),
         data,
         timestamp: new Date().toISOString(),
         path: request.url,
@@ -75,15 +83,15 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
    * 例如: '/auth/login' -> '登录'
    */
   private extractOperationName(path: string): string {
-    const segments = path.split('/').filter(segment => segment.length > 0);
+    const segments = path.split('/').filter((segment) => segment.length > 0);
     const lastSegment = segments[segments.length - 1];
 
     // 常见操作的英文到中文映射
     const operationMap: Record<string, string> = {
-      'login': '登录',
-      'logout': '注销',
-      'register': '注册',
-      'profile': '获取信息',
+      login: '登录',
+      logout: '注销',
+      register: '注册',
+      profile: '获取信息',
       'check-auth': '认证验证',
     };
 

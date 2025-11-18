@@ -34,15 +34,21 @@ export class AdminInitService implements OnModuleInit {
       const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
 
       if (!adminPassword || adminPassword.trim() === '') {
-        this.logger.error('管理员密码未配置！请在 .env 文件中设置 ADMIN_PASSWORD');
-        this.logger.error('为安全起见，应用将停止启动。请配置管理员密码后重试。');
+        this.logger.error(
+          '管理员密码未配置！请在 .env 文件中设置 ADMIN_PASSWORD',
+        );
+        this.logger.error(
+          '为安全起见，应用将停止启动。请配置管理员密码后重试。',
+        );
         process.exit(1);
       }
 
       // 验证密码强度
       if (adminPassword.length < 8) {
         this.logger.error('管理员密码长度不足！密码长度至少需要8个字符');
-        this.logger.error('为安全起见，应用将停止启动。请设置更强的管理员密码后重试。');
+        this.logger.error(
+          '为安全起见，应用将停止启动。请设置更强的管理员密码后重试。',
+        );
         process.exit(1);
       }
 
@@ -62,7 +68,8 @@ export class AdminInitService implements OnModuleInit {
     this.logger.log('开始创建管理员用户...');
 
     // 加密密码（使用更高的加密轮数以确保安全性）
-    const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 12;
+    const bcryptRounds =
+      this.configService.get<number>('auth.security.bcryptRounds') || 12;
     const hashedPassword = await bcrypt.hash(password, bcryptRounds);
 
     // 直接通过 UserRepository 创建用户数据，绕过注册接口的限制

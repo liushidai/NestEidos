@@ -7,7 +7,14 @@ import { SystemModule } from './system/system.module';
 import { RedisModule } from '@/cache';
 
 @Module({
-  imports: [RedisModule, UserModule, AuthModule, AlbumModule, ImageModule, SystemModule],
+  imports: [
+    RedisModule,
+    UserModule,
+    AuthModule,
+    AlbumModule,
+    ImageModule,
+    SystemModule,
+  ],
   controllers: [],
   providers: [],
   exports: [],

@@ -40,7 +40,7 @@ describe('AuthController', () => {
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
-    authService = module.get(AuthService) as jest.Mocked<AuthService>;
+    authService = module.get(AuthService);
 
     jest.clearAllMocks();
   });
@@ -89,7 +89,9 @@ describe('AuthController', () => {
       const error = new ConflictException('用户名 admin 不允许注册');
       mockAuthService.register.mockRejectedValue(error);
 
-      await expect(controller.register(adminRegisterDto)).rejects.toThrow(error);
+      await expect(controller.register(adminRegisterDto)).rejects.toThrow(
+        error,
+      );
     });
   });
 
@@ -101,7 +103,8 @@ describe('AuthController', () => {
 
     it('should login user successfully', async () => {
       const loginResponse = {
-        token: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        token:
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
         expires_in: 3600,
       };
 
@@ -122,7 +125,8 @@ describe('AuthController', () => {
   });
 
   describe('logout', () => {
-    const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+    const token =
+      'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
     it('should logout user successfully', async () => {
       const mockRequest = {
@@ -175,15 +179,21 @@ describe('AuthController', () => {
 
       const expectedResponse = {
         success: true,
-        message: '密码修改成功'
+        message: '密码修改成功',
       };
 
       mockAuthService.changePassword.mockResolvedValue(expectedResponse);
 
-      const result = await controller.changePassword(mockRequest, changePasswordDto);
+      const result = await controller.changePassword(
+        mockRequest,
+        changePasswordDto,
+      );
 
       expect(result).toEqual(expectedResponse);
-      expect(mockAuthService.changePassword).toHaveBeenCalledWith(mockUser.userId, changePasswordDto);
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(
+        mockUser.userId,
+        changePasswordDto,
+      );
     });
 
     it('should handle service errors', async () => {
@@ -202,10 +212,17 @@ describe('AuthController', () => {
         user: mockUser,
       } as any;
 
-      mockAuthService.changePassword.mockRejectedValue(new Error('旧密码不正确'));
+      mockAuthService.changePassword.mockRejectedValue(
+        new Error('旧密码不正确'),
+      );
 
-      await expect(controller.changePassword(mockRequest, changePasswordDto)).rejects.toThrow('旧密码不正确');
-      expect(mockAuthService.changePassword).toHaveBeenCalledWith(mockUser.userId, changePasswordDto);
+      await expect(
+        controller.changePassword(mockRequest, changePasswordDto),
+      ).rejects.toThrow('旧密码不正确');
+      expect(mockAuthService.changePassword).toHaveBeenCalledWith(
+        mockUser.userId,
+        changePasswordDto,
+      );
     });
   });
 });

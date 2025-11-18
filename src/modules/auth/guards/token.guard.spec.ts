@@ -32,7 +32,7 @@ describe('TokenGuard', () => {
     }).compile();
 
     guard = module.get<TokenGuard>(TokenGuard);
-    authService = module.get(AuthService) as jest.Mocked<AuthService>;
+    authService = module.get(AuthService);
 
     jest.clearAllMocks();
   });
@@ -56,7 +56,8 @@ describe('TokenGuard', () => {
   });
 
   describe('canActivate', () => {
-    const validToken = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+    const validToken =
+      'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
     it('should allow access with valid Bearer token', async () => {
       mockAuthService.validateToken.mockResolvedValue(mockUser);
@@ -68,7 +69,9 @@ describe('TokenGuard', () => {
 
       expect(result).toBe(true);
       expect(mockAuthService.validateToken).toHaveBeenCalledWith(validToken);
-      expect(mockContext.switchToHttp().getRequest<any>().user).toEqual(mockUser);
+      expect(mockContext.switchToHttp().getRequest<any>().user).toEqual(
+        mockUser,
+      );
     });
 
     it('should allow access with valid token in query params', async () => {

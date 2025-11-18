@@ -8,7 +8,10 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  @ApiOperation({ summary: '应用健康检查', description: '检查应用是否正常运行' })
+  @ApiOperation({
+    summary: '应用健康检查',
+    description: '检查应用是否正常运行',
+  })
   @ApiResponse({
     status: 200,
     description: '应用正常运行',
@@ -17,9 +20,9 @@ export class AppController {
         message: '欢迎使用 NestEidos 图床服务',
         timestamp: '2024-01-01T00:00:00.000Z',
         version: '2.0.0',
-        status: 'healthy'
-      }
-    }
+        status: 'healthy',
+      },
+    },
   })
   getHello(): string {
     return this.appService.getHello();

@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
 import { Readable } from 'stream';
@@ -7,7 +12,11 @@ import { Readable } from 'stream';
  * 存储服务接口
  */
 export interface StorageProvider {
-  upload(filePath: string, buffer: Buffer, contentType: string): Promise<string>;
+  upload(
+    filePath: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<string>;
   delete(key: string): Promise<void>;
   deleteMany(keys: string[]): Promise<void>;
   getSignedUrl(key: string, expiresIn?: number): Promise<string>;
@@ -18,15 +27,24 @@ export interface StorageProvider {
  * MinIO 存储服务实现
  */
 @Injectable()
-export class StorageService implements StorageProvider, OnModuleInit, OnModuleDestroy {
+export class StorageService
+  implements StorageProvider, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(StorageService.name);
   private readonly client: Client;
   private readonly bucket: string;
 
   constructor(private readonly configService: ConfigService) {
-    let endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
-    const port = Number.parseInt(this.configService.get<string>('MINIO_PORT', '9000'), 10);
-    const useSSL = this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
+    let endPoint = this.configService.get<string>(
+      'MINIO_ENDPOINT',
+      'localhost',
+    );
+    const port = Number.parseInt(
+      this.configService.get<string>('MINIO_PORT', '9000'),
+      10,
+    );
+    const useSSL =
+      this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
     const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY');
     const secretKey = this.configService.get<string>('MINIO_SECRET_KEY');
     this.bucket = this.configService.get<string>('MINIO_BUCKET', 'images');
@@ -39,7 +57,9 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
     }
 
     if (!accessKey || !secretKey) {
-      throw new Error('MinIO 凭据未配置: MINIO_ACCESS_KEY 和 MINIO_SECRET_KEY 环境变量是必需的');
+      throw new Error(
+        'MinIO 凭据未配置: MINIO_ACCESS_KEY 和 MINIO_SECRET_KEY 环境变量是必需的',
+      );
     }
 
     this.client = new Client({
@@ -50,7 +70,9 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
       secretKey,
     });
 
-    this.logger.log(`MinIO 客户端已初始化: ${endPoint}:${port}, bucket: ${this.bucket}`);
+    this.logger.log(
+      `MinIO 客户端已初始化: ${endPoint}:${port}, bucket: ${this.bucket}`,
+    );
   }
 
   async onModuleInit() {
@@ -77,20 +99,18 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
   /**
    * 上传文件到 MinIO
    */
-  async upload(key: string, buffer: Buffer, contentType: string): Promise<string> {
+  async upload(
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<string> {
     try {
       const stream = Readable.from(buffer);
 
-      await this.client.putObject(
-        this.bucket,
-        key,
-        stream,
-        buffer.length,
-        {
-          'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000', // 缓存一年
-        }
-      );
+      await this.client.putObject(this.bucket, key, stream, buffer.length, {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000', // 缓存一年
+      });
 
       this.logger.debug(`文件已上传: ${key}, 大小: ${buffer.length} bytes`);
       return key;
@@ -134,12 +154,15 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
   /**
    * 获取文件的预签名URL
    */
-  async getSignedUrl(key: string, expiresIn: number = 24 * 60 * 60): Promise<string> {
+  async getSignedUrl(
+    key: string,
+    expiresIn: number = 24 * 60 * 60,
+  ): Promise<string> {
     try {
       const url = await this.client.presignedGetObject(
         this.bucket,
         key,
-        expiresIn
+        expiresIn,
       );
       return url;
     } catch (error) {
@@ -211,7 +234,7 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
       await this.client.copyObject(
         this.bucket,
         destKey,
-        `/${this.bucket}/${sourceKey}`
+        `/${this.bucket}/${sourceKey}`,
       );
       this.logger.debug(`文件已复制: ${sourceKey} -> ${destKey}`);
     } catch (error) {
@@ -223,9 +246,16 @@ export class StorageService implements StorageProvider, OnModuleInit, OnModuleDe
   /**
    * 列出指定前缀的文件
    */
-  async listFiles(prefix: string = '', recursive: boolean = false): Promise<any[]> {
+  async listFiles(
+    prefix: string = '',
+    recursive: boolean = false,
+  ): Promise<any[]> {
     try {
-      const objectsStream = this.client.listObjects(this.bucket, prefix, recursive);
+      const objectsStream = this.client.listObjects(
+        this.bucket,
+        prefix,
+        recursive,
+      );
       const objects: any[] = [];
 
       return new Promise((resolve, reject) => {

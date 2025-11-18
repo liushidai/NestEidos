@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -26,13 +21,45 @@ export class AdminUsersController {
   @Get()
   @ApiOperation({
     summary: '分页获取用户列表',
-    description: '管理员可以分页查询所有用户，支持用户名模糊搜索和状态筛选'
+    description: '管理员可以分页查询所有用户，支持用户名模糊搜索和状态筛选',
   })
-  @ApiQuery({ name: 'page', description: '页码', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', description: '每页数量', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'userName', description: '用户名模糊搜索', required: false, type: String, example: 'admin' })
-  @ApiQuery({ name: 'userType', description: '用户类型筛选', required: false, type: Number, enum: [1, 10], example: 10 })
-  @ApiQuery({ name: 'userStatus', description: '用户状态筛选', required: false, type: Number, enum: [1, 2], example: 1 })
+  @ApiQuery({
+    name: 'page',
+    description: '页码',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: '每页数量',
+    required: false,
+    type: Number,
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'userName',
+    description: '用户名模糊搜索',
+    required: false,
+    type: String,
+    example: 'admin',
+  })
+  @ApiQuery({
+    name: 'userType',
+    description: '用户类型筛选',
+    required: false,
+    type: Number,
+    enum: [1, 10],
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'userStatus',
+    description: '用户状态筛选',
+    required: false,
+    type: Number,
+    enum: [1, 2],
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: '获取成功',
@@ -46,7 +73,7 @@ export class AdminUsersController {
             userStatus: 1,
             createdAt: '2024-01-01T00:00:00.000Z',
             updatedAt: '2024-01-01T00:00:00.000Z',
-          }
+          },
         ],
         total: 1,
         page: 1,

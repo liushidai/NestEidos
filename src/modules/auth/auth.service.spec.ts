@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BadRequestException, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { User } from '../user/entities/user.entity';
@@ -73,9 +77,9 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userRepository = module.get(UserRepository) as jest.Mocked<UserRepository>;
-    cacheService = module.get(CacheService) as jest.Mocked<CacheService>;
-    configService = module.get(ConfigService) as jest.Mocked<ConfigService>;
+    userRepository = module.get(UserRepository);
+    cacheService = module.get(CacheService);
+    configService = module.get(ConfigService);
 
     // 默认配置值
     mockConfigService.get.mockImplementation((key: string) => {
@@ -104,13 +108,25 @@ describe('AuthService', () => {
     it('should successfully register a new user', async () => {
       mockUserRepository.findByUserName.mockResolvedValue(null);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashedpassword' as never);
-      const expectedUser = { ...registerDto, passWord: 'hashedpassword', userType: 10 };
-      const createdUser = { ...expectedUser, id: mockUser.id, userStatus: mockUser.userStatus, createdAt: mockUser.createdAt, updatedAt: mockUser.updatedAt };
+      const expectedUser = {
+        ...registerDto,
+        passWord: 'hashedpassword',
+        userType: 10,
+      };
+      const createdUser = {
+        ...expectedUser,
+        id: mockUser.id,
+        userStatus: mockUser.userStatus,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      };
       mockUserRepository.create.mockReturnValue(createdUser as User);
 
       const result = await service.register(registerDto);
 
-      expect(mockUserRepository.findByUserName).toHaveBeenCalledWith(registerDto.userName);
+      expect(mockUserRepository.findByUserName).toHaveBeenCalledWith(
+        registerDto.userName,
+      );
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.passWord, 10);
       expect(mockUserRepository.create).toHaveBeenCalledWith(expectedUser);
       expect(result).toEqual(createdUser);
@@ -178,7 +194,7 @@ describe('AuthService', () => {
       const bannedUser = { ...mockUser, userStatus: 2 };
       mockUserRepository.findByUserName.mockResolvedValue(bannedUser);
 
-      const error = await service.login(loginDto).catch(err => err);
+      const error = await service.login(loginDto).catch((err) => err);
       expect(error).toBeInstanceOf(UnauthorizedException);
       expect(error.message).toBe('账户已被封锁，请联系管理员');
     });
@@ -194,7 +210,8 @@ describe('AuthService', () => {
   });
 
   describe('validateToken', () => {
-    const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+    const token =
+      'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
     const userData = {
       userId: '1234567890123456789',
       userName: 'testuser',
@@ -228,14 +245,17 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+    const token =
+      'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
     it('should successfully logout', async () => {
       mockCacheService.delete.mockResolvedValue(undefined);
 
       await service.logout(token);
 
-      expect(mockCacheService.delete).toHaveBeenCalledWith(`auth:token:${token}`);
+      expect(mockCacheService.delete).toHaveBeenCalledWith(
+        `auth:token:${token}`,
+      );
     });
   });
 
@@ -317,7 +337,8 @@ describe('AuthService', () => {
     });
 
     it('should use default Redis key prefix', async () => {
-      const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const token =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
       const userData = {
         userId: '1234567890123456789',
         userName: 'testuser',
@@ -349,7 +370,10 @@ describe('AuthService', () => {
       };
 
       mockUserRepository.findByUserName.mockResolvedValue(null);
-      mockUserRepository.create.mockReturnValue({ ...registerDto, passWord: 'hashedpassword' } as User);
+      mockUserRepository.create.mockReturnValue({
+        ...registerDto,
+        passWord: 'hashedpassword',
+      } as User);
       // UserRepository.create handles the save operation
 
       await service.register(registerDto);
@@ -367,7 +391,9 @@ describe('AuthService', () => {
 
       mockUserRepository.findByUserName.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      mockCacheService.set.mockRejectedValue(new Error('Redis connection failed'));
+      mockCacheService.set.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
@@ -375,8 +401,11 @@ describe('AuthService', () => {
     });
 
     it('should handle Redis connection error during token validation', async () => {
-      const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockCacheService.get.mockRejectedValue(new Error('Redis connection failed'));
+      const token =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      mockCacheService.get.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       const result = await service.validateToken(token);
 
@@ -384,8 +413,11 @@ describe('AuthService', () => {
     });
 
     it('should handle Redis connection error during logout gracefully', async () => {
-      const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      mockCacheService.delete.mockRejectedValue(new Error('Redis connection failed'));
+      const token =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      mockCacheService.delete.mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       // 注销不应该抛出异常
       await expect(service.logout(token)).resolves.toBeUndefined();
@@ -394,7 +426,8 @@ describe('AuthService', () => {
 
   describe('Edge cases', () => {
     it('should handle empty Redis response during token validation', async () => {
-      const token = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const token =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
       mockCacheService.get.mockResolvedValue(undefined);
 
       const result = await service.validateToken(token);
@@ -412,8 +445,18 @@ describe('AuthService', () => {
       };
 
       mockUserRepository.findByUserName.mockResolvedValue(null);
-      const expectedUser = { ...registerDto, passWord: 'hashedpassword', userType: 10 };
-      const createdUser = { ...expectedUser, id: mockUser.id, userStatus: mockUser.userStatus, createdAt: mockUser.createdAt, updatedAt: mockUser.updatedAt };
+      const expectedUser = {
+        ...registerDto,
+        passWord: 'hashedpassword',
+        userType: 10,
+      };
+      const createdUser = {
+        ...expectedUser,
+        id: mockUser.id,
+        userStatus: mockUser.userStatus,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      };
       mockUserRepository.create.mockReturnValue(createdUser as User);
 
       await service.register(registerDto);
@@ -434,21 +477,37 @@ describe('AuthService', () => {
 
       mockUserRepository.findById.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never); // 第二次比较返回false，表示新密码与旧密码不同
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
+      jest
+        .spyOn(bcrypt, 'compare')
+        .mockResolvedValueOnce(true as never)
+        .mockResolvedValueOnce(false as never); // 第二次比较返回false，表示新密码与旧密码不同
+      jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('newhashedpassword' as never);
       mockUserRepository.update.mockResolvedValue(mockUser);
 
       const result = await service.changePassword(userId, changePasswordDto);
 
       expect(result).toEqual({
         success: true,
-        message: '密码修改成功'
+        message: '密码修改成功',
       });
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
-      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
-      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.newPassword, mockUser.passWord);
-      expect(bcrypt.hash).toHaveBeenCalledWith(changePasswordDto.newPassword, 10);
-      expect(mockUserRepository.update).toHaveBeenCalledWith(userId, { passWord: 'newhashedpassword' });
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        changePasswordDto.oldPassword,
+        mockUser.passWord,
+      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        changePasswordDto.newPassword,
+        mockUser.passWord,
+      );
+      expect(bcrypt.hash).toHaveBeenCalledWith(
+        changePasswordDto.newPassword,
+        10,
+      );
+      expect(mockUserRepository.update).toHaveBeenCalledWith(userId, {
+        passWord: 'newhashedpassword',
+      });
     });
 
     it('should throw UnauthorizedException if user does not exist', async () => {
@@ -460,7 +519,9 @@ describe('AuthService', () => {
 
       mockUserRepository.findById.mockResolvedValue(null);
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
     });
 
@@ -474,7 +535,9 @@ describe('AuthService', () => {
       const inactiveUser = { ...mockUser, userStatus: 2 };
       mockUserRepository.findById.mockResolvedValue(inactiveUser);
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
     });
 
@@ -488,9 +551,14 @@ describe('AuthService', () => {
       mockUserRepository.findById.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(UnauthorizedException);
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
-      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        changePasswordDto.oldPassword,
+        mockUser.passWord,
+      );
     });
 
     it('should throw ConflictException if new password is same as old password', async () => {
@@ -503,10 +571,18 @@ describe('AuthService', () => {
       mockUserRepository.findById.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(ConflictException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(ConflictException);
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
-      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.oldPassword, mockUser.passWord);
-      expect(bcrypt.compare).toHaveBeenCalledWith(changePasswordDto.newPassword, mockUser.passWord);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        changePasswordDto.oldPassword,
+        mockUser.passWord,
+      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        changePasswordDto.newPassword,
+        mockUser.passWord,
+      );
     });
 
     it('should use configured bcrypt rounds for password hashing', async () => {
@@ -518,8 +594,13 @@ describe('AuthService', () => {
 
       mockUserRepository.findById.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
+      jest
+        .spyOn(bcrypt, 'compare')
+        .mockResolvedValueOnce(true as never)
+        .mockResolvedValueOnce(false as never);
+      jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('newhashedpassword' as never);
       mockUserRepository.update.mockResolvedValue(mockUser);
 
       // 配置bcrypt轮数
@@ -530,7 +611,10 @@ describe('AuthService', () => {
 
       await service.changePassword(userId, changePasswordDto);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith(changePasswordDto.newPassword, 14);
+      expect(bcrypt.hash).toHaveBeenCalledWith(
+        changePasswordDto.newPassword,
+        14,
+      );
     });
 
     it('should handle database errors during update', async () => {
@@ -542,11 +626,20 @@ describe('AuthService', () => {
 
       mockUserRepository.findById.mockResolvedValue(mockUser);
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('newhashedpassword' as never);
-      mockUserRepository.update.mockRejectedValue(new Error('Database update failed'));
+      jest
+        .spyOn(bcrypt, 'compare')
+        .mockResolvedValueOnce(true as never)
+        .mockResolvedValueOnce(false as never);
+      jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('newhashedpassword' as never);
+      mockUserRepository.update.mockRejectedValue(
+        new Error('Database update failed'),
+      );
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow('Database update failed');
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow('Database update failed');
     });
   });
 

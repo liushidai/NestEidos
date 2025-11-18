@@ -22,7 +22,12 @@ import { CacheModule } from '@/cache';
     ConfigModule,
     CacheModule,
   ],
-  controllers: [ProtectedImageController, ImagesController, ImageUploadController, ImageAccessController],
+  controllers: [
+    ProtectedImageController,
+    ImagesController,
+    ImageUploadController,
+    ImageAccessController,
+  ],
   providers: [
     ImageService,
     ImageRepository,

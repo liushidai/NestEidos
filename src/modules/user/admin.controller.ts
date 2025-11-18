@@ -44,9 +44,13 @@ export class AdminController {
   @Get(':id')
   @ApiOperation({
     summary: '根据ID获取用户详细信息',
-    description: '管理员可以查看任意用户的详细信息（不包含密码）'
+    description: '管理员可以查看任意用户的详细信息（不包含密码）',
   })
-  @ApiParam({ name: 'id', description: '用户ID', example: '1234567890123456789' })
+  @ApiParam({
+    name: 'id',
+    description: '用户ID',
+    example: '1234567890123456789',
+  })
   @ApiResponse({
     status: 200,
     description: '获取成功',
@@ -77,9 +81,13 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '切换用户状态',
-    description: '管理员可以启用或禁用用户账户'
+    description: '管理员可以启用或禁用用户账户',
   })
-  @ApiParam({ name: 'id', description: '用户ID', example: '1234567890123456789' })
+  @ApiParam({
+    name: 'id',
+    description: '用户ID',
+    example: '1234567890123456789',
+  })
   @ApiBody({ type: ToggleUserStatusDto })
   @ApiResponse({
     status: 200,
@@ -120,9 +128,13 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '重置用户密码',
-    description: '管理员可以重置任意用户的密码，支持指定新密码或使用默认密码'
+    description: '管理员可以重置任意用户的密码，支持指定新密码或使用默认密码',
   })
-  @ApiParam({ name: 'id', description: '用户ID', example: '1234567890123456789' })
+  @ApiParam({
+    name: 'id',
+    description: '用户ID',
+    example: '1234567890123456789',
+  })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
     status: 200,
@@ -175,9 +187,13 @@ export class AdminController {
   @Get(':id/exists')
   @ApiOperation({
     summary: '检查用户是否存在',
-    description: '管理员可以检查指定ID的用户是否存在'
+    description: '管理员可以检查指定ID的用户是否存在',
   })
-  @ApiParam({ name: 'id', description: '用户ID', example: '1234567890123456789' })
+  @ApiParam({
+    name: 'id',
+    description: '用户ID',
+    example: '1234567890123456789',
+  })
   @ApiResponse({
     status: 200,
     description: '检查完成',

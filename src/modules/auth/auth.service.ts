@@ -1,5 +1,17 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger, Inject } from '@nestjs/common';
-import { CacheService, TTL_CONFIGS, TTLUtils, TTLUnit, CacheKeyUtils } from '@/cache';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+  Inject,
+} from '@nestjs/common';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  TTLUnit,
+  CacheKeyUtils,
+} from '@/cache';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../user/entities/user.entity';
 import { RegisterUserDto } from '../user/dto/register-user.dto';
@@ -30,15 +42,21 @@ export class AuthService {
     }
 
     // 检查用户名是否已存在
-    const existingUser = await this.userRepository.findByUserName(registerUserDto.userName);
+    const existingUser = await this.userRepository.findByUserName(
+      registerUserDto.userName,
+    );
 
     if (existingUser) {
       throw new ConflictException('用户名已存在');
     }
 
     // 密码加密
-    const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
-    const hashedPassword = await bcrypt.hash(registerUserDto.passWord, bcryptRounds);
+    const bcryptRounds =
+      this.configService.get<number>('auth.security.bcryptRounds') || 10;
+    const hashedPassword = await bcrypt.hash(
+      registerUserDto.passWord,
+      bcryptRounds,
+    );
 
     // 创建用户，设置默认 userType 为 10（普通用户）
     const userData = {
@@ -60,9 +78,13 @@ export class AuthService {
   /**
    * 用户登录
    */
-  async login(loginUserDto: LoginUserDto): Promise<{ token: string; expires_in: number }> {
+  async login(
+    loginUserDto: LoginUserDto,
+  ): Promise<{ token: string; expires_in: number }> {
     // 查找用户
-    const user = await this.userRepository.findByUserName(loginUserDto.userName);
+    const user = await this.userRepository.findByUserName(
+      loginUserDto.userName,
+    );
 
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
@@ -75,12 +97,17 @@ export class AuthService {
     }
 
     if (user.userStatus !== 1) {
-      this.logger.warn(`用户状态异常: ${loginUserDto.userName}, 状态: ${user.userStatus}`);
+      this.logger.warn(
+        `用户状态异常: ${loginUserDto.userName}, 状态: ${user.userStatus}`,
+      );
       throw new UnauthorizedException('账户状态异常，请联系管理员');
     }
 
     // 验证密码
-    const isPasswordValid = await bcrypt.compare(loginUserDto.passWord, user.passWord);
+    const isPasswordValid = await bcrypt.compare(
+      loginUserDto.passWord,
+      user.passWord,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('用户名或密码错误');
@@ -91,12 +118,17 @@ export class AuthService {
       const token = this.generateToken();
 
       // 使用统一的TTL配置，支持动态覆盖
-      const configuredExpiresIn = this.configService.get<number>('auth.token.expiresIn');
+      const configuredExpiresIn = this.configService.get<number>(
+        'auth.token.expiresIn',
+      );
       let tokenTTL = this.ttlConfigs.AUTH_TOKEN;
 
       if (configuredExpiresIn) {
         // 如果配置中有具体的过期时间，创建动态TTL配置
-        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, TTLUnit.HOURS);
+        tokenTTL = TTLUtils.createDynamicTTL(
+          configuredExpiresIn,
+          TTLUnit.HOURS,
+        );
       }
 
       // 存储到 Redis（使用统一的TTL配置）
@@ -112,14 +144,19 @@ export class AuthService {
 
       const expiresInSeconds = TTLUtils.toSeconds(tokenTTL);
 
-      this.logger.log(`用户 ${user.userName} 登录成功，Token: ${token.substring(0, 8)}..., TTL: ${TTLUtils.getDescription(tokenTTL)}`);
+      this.logger.log(
+        `用户 ${user.userName} 登录成功，Token: ${token.substring(0, 8)}..., TTL: ${TTLUtils.getDescription(tokenTTL)}`,
+      );
 
       return {
         token,
         expires_in: expiresInSeconds,
       };
     } catch (error) {
-      this.logger.error(`登录过程中 Redis 操作失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `登录过程中 Redis 操作失败: ${error.message}`,
+        error.stack,
+      );
       throw new UnauthorizedException('登录失败，请稍后重试');
     }
   }
@@ -129,16 +166,23 @@ export class AuthService {
    */
   async validateToken(token: string): Promise<any> {
     try {
-      const userData = await this.cacheService.get<any>(this.getTokenCacheKey(token));
+      const userData = await this.cacheService.get<any>(
+        this.getTokenCacheKey(token),
+      );
 
       if (!userData) {
         return null;
       }
 
-      this.logger.verbose(`Token 验证成功: ${token.substring(0, 8)}..., 用户: ${userData.userName}`);
+      this.logger.verbose(
+        `Token 验证成功: ${token.substring(0, 8)}..., 用户: ${userData.userName}`,
+      );
       return userData;
     } catch (error) {
-      this.logger.error(`Token 验证过程中 Redis 操作失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `Token 验证过程中 Redis 操作失败: ${error.message}`,
+        error.stack,
+      );
       return null;
     }
   }
@@ -151,7 +195,10 @@ export class AuthService {
       await this.cacheService.delete(this.getTokenCacheKey(token));
       this.logger.log(`用户注销成功，Token: ${token.substring(0, 8)}...`);
     } catch (error) {
-      this.logger.error(`注销过程中 Redis 操作失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `注销过程中 Redis 操作失败: ${error.message}`,
+        error.stack,
+      );
       // 即使 Redis 删除失败，也不抛出异常，因为 token 会自然过期
     }
   }
@@ -160,7 +207,8 @@ export class AuthService {
    * 生成高强度随机 token
    */
   private generateToken(): string {
-    const bytesLength = this.configService.get<number>('auth.token.bytesLength') || 32;
+    const bytesLength =
+      this.configService.get<number>('auth.token.bytesLength') || 32;
     return randomBytes(bytesLength).toString('hex');
   }
 
@@ -181,35 +229,49 @@ export class AuthService {
   /**
    * 刷新token有效期
    */
-  async refreshToken(token: string): Promise<{ success: boolean; expires_in?: number }> {
+  async refreshToken(
+    token: string,
+  ): Promise<{ success: boolean; expires_in?: number }> {
     try {
-      const userData = await this.cacheService.get<any>(this.getTokenCacheKey(token));
+      const userData = await this.cacheService.get<any>(
+        this.getTokenCacheKey(token),
+      );
 
       if (!userData) {
         return { success: false };
       }
 
       // 使用统一的TTL配置
-      const configuredExpiresIn = this.configService.get<number>('auth.token.expiresIn');
+      const configuredExpiresIn = this.configService.get<number>(
+        'auth.token.expiresIn',
+      );
       let tokenTTL = this.ttlConfigs.AUTH_TOKEN;
 
       if (configuredExpiresIn) {
-        tokenTTL = TTLUtils.createDynamicTTL(configuredExpiresIn, TTLUnit.HOURS);
+        tokenTTL = TTLUtils.createDynamicTTL(
+          configuredExpiresIn,
+          TTLUnit.HOURS,
+        );
       }
 
       // 重新设置token和过期时间
       await this.cacheService.set(
         this.getTokenCacheKey(token),
         userData,
-        tokenTTL
+        tokenTTL,
       );
 
       const expiresInSeconds = TTLUtils.toSeconds(tokenTTL);
 
-      this.logger.log(`Token 刷新成功: ${token.substring(0, 8)}..., 用户: ${userData.userName}, TTL: ${TTLUtils.getDescription(tokenTTL)}`);
+      this.logger.log(
+        `Token 刷新成功: ${token.substring(0, 8)}..., 用户: ${userData.userName}, TTL: ${TTLUtils.getDescription(tokenTTL)}`,
+      );
       return { success: true, expires_in: expiresInSeconds };
     } catch (error) {
-      this.logger.error(`Token 刷新过程中 Redis 操作失败: ${error.message}`, error.stack);
+      this.logger.error(
+        `Token 刷新过程中 Redis 操作失败: ${error.message}`,
+        error.stack,
+      );
       return { success: false };
     }
   }
@@ -231,14 +293,17 @@ export class AuthService {
    */
   async getTokenTtl(token: string): Promise<number | null> {
     try {
-      const userData = await this.cacheService.get<any>(this.getTokenCacheKey(token));
+      const userData = await this.cacheService.get<any>(
+        this.getTokenCacheKey(token),
+      );
       if (!userData) {
         return null;
       }
 
       // 注意：CacheService目前没有直接提供TTL查询功能
       // 这里返回一个估计值，实际应用中可能需要扩展CacheService
-      const expiresIn = this.configService.get<number>('auth.token.expiresIn') || 3600;
+      const expiresIn =
+        this.configService.get<number>('auth.token.expiresIn') || 3600;
       return expiresIn; // 简化实现，返回配置的过期时间
     } catch (error) {
       this.logger.error(`获取token TTL失败: ${error.message}`, error.stack);
@@ -249,7 +314,10 @@ export class AuthService {
   /**
    * 验证token并自动刷新（如果接近过期）
    */
-  async validateAndRefreshToken(token: string, refreshThreshold: number = 300): Promise<any> {
+  async validateAndRefreshToken(
+    token: string,
+    refreshThreshold: number = 300,
+  ): Promise<any> {
     // refreshThreshold默认为5分钟（300秒）
     const userData = await this.validateToken(token);
 
@@ -272,7 +340,10 @@ export class AuthService {
   /**
    * 修改密码
    */
-  async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<{ success: boolean; message: string }> {
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       // 根据用户ID查找用户
       const user = await this.userRepository.findById(userId);
@@ -287,31 +358,43 @@ export class AuthService {
       }
 
       // 验证旧密码
-      const isOldPasswordValid = await bcrypt.compare(changePasswordDto.oldPassword, user.passWord);
+      const isOldPasswordValid = await bcrypt.compare(
+        changePasswordDto.oldPassword,
+        user.passWord,
+      );
 
       if (!isOldPasswordValid) {
         throw new UnauthorizedException('旧密码不正确');
       }
 
       // 检查新密码是否与旧密码相同
-      const isSamePassword = await bcrypt.compare(changePasswordDto.newPassword, user.passWord);
+      const isSamePassword = await bcrypt.compare(
+        changePasswordDto.newPassword,
+        user.passWord,
+      );
 
       if (isSamePassword) {
         throw new ConflictException('新密码不能与旧密码相同');
       }
 
       // 加密新密码
-      const bcryptRounds = this.configService.get<number>('auth.security.bcryptRounds') || 10;
-      const hashedNewPassword = await bcrypt.hash(changePasswordDto.newPassword, bcryptRounds);
+      const bcryptRounds =
+        this.configService.get<number>('auth.security.bcryptRounds') || 10;
+      const hashedNewPassword = await bcrypt.hash(
+        changePasswordDto.newPassword,
+        bcryptRounds,
+      );
 
       // 更新密码
-      await this.userRepository.update(user.id, { passWord: hashedNewPassword });
+      await this.userRepository.update(user.id, {
+        passWord: hashedNewPassword,
+      });
 
       this.logger.log(`用户 ${user.userName} 密码修改成功`);
 
       return {
         success: true,
-        message: '密码修改成功'
+        message: '密码修改成功',
       };
     } catch (error) {
       this.logger.error(`用户 ${userId} 修改密码失败: ${error.message}`);

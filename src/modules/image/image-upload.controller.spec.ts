@@ -17,7 +17,8 @@ describe('ImageUploadController', () => {
     albumId: '0',
     originalName: 'test.jpg',
     title: '测试图片',
-    imageHash: 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+    imageHash:
+      'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
     imageSize: 1024000,
     imageMimeType: 'image/jpeg',
     imageWidth: 1920,
@@ -71,12 +72,12 @@ describe('ImageUploadController', () => {
         },
       ],
     })
-    .overrideGuard(require('../auth/guards/token.guard').TokenGuard)
-    .useValue({ canActivate: () => true })
-    .compile();
+      .overrideGuard(require('../auth/guards/token.guard').TokenGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<ImageUploadController>(ImageUploadController);
-    imageService = module.get(ImageService) as jest.Mocked<ImageService>;
+    imageService = module.get(ImageService);
 
     jest.clearAllMocks();
   });
@@ -115,7 +116,11 @@ describe('ImageUploadController', () => {
 
       const mockRequest = { user: mockUser } as any;
 
-      const result = await controller.uploadImage(mockFileData, uploadImageDto, mockRequest);
+      const result = await controller.uploadImage(
+        mockFileData,
+        uploadImageDto,
+        mockRequest,
+      );
 
       // 验证控制器正确转换了 DTO 并调用服务
       const expectedCreateImageDto: CreateImageDto = {
@@ -127,7 +132,7 @@ describe('ImageUploadController', () => {
       expect(imageService.create).toHaveBeenCalledWith(
         expectedCreateImageDto,
         mockUser.userId,
-        mockFileData
+        mockFileData,
       );
       expect(result).toEqual(mockImage);
     });
@@ -174,7 +179,7 @@ describe('ImageUploadController', () => {
       expect(imageService.create).toHaveBeenCalledWith(
         expectedCreateImageDto,
         mockUser.userId,
-        mockFileData
+        mockFileData,
       );
     });
   });

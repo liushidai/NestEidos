@@ -9,7 +9,11 @@ describe('ResponseInterceptor', () => {
     interceptor = new ResponseInterceptor();
   });
 
-  const createMockContext = (method: string, url: string, statusCode: number = 200) => {
+  const createMockContext = (
+    method: string,
+    url: string,
+    statusCode: number = 200,
+  ) => {
     const mockRequest = {
       method,
       url,
@@ -42,7 +46,9 @@ describe('ResponseInterceptor', () => {
       const testData = { id: 1, name: 'test' };
       const mockNext = createMockCallHandler(testData);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
 
       expect(result!).toEqual({
@@ -59,7 +65,9 @@ describe('ResponseInterceptor', () => {
       const testData = { id: 1 };
       const mockNext = createMockCallHandler(testData);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.code).toBe(201);
     });
@@ -79,7 +87,9 @@ describe('ResponseInterceptor', () => {
         const { mockContext } = createMockContext(method, '/test');
         const mockNext = createMockCallHandler(null);
 
-        const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+        const result = await interceptor
+          .intercept(mockContext, mockNext)
+          .toPromise();
         expect(result).toBeDefined();
         expect(result!.message).toBe(expected);
       });
@@ -89,7 +99,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('UNKNOWN', '/test');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.message).toBe('操作成功');
     });
@@ -110,7 +122,9 @@ describe('ResponseInterceptor', () => {
         const { mockContext } = createMockContext(method, path);
         const mockNext = createMockCallHandler(null);
 
-        const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+        const result = await interceptor
+          .intercept(mockContext, mockNext)
+          .toPromise();
         expect(result).toBeDefined();
         expect(result!.message).toBe(expected);
       });
@@ -122,7 +136,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('POST', '/auth/custom-action');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       // custom-action 不在操作名称映射中，应该返回默认的"操作成功"
       expect(result!.message).toBe('操作成功');
@@ -132,7 +148,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('GET', '/auth/some-endpoint');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.message).toBe('获取成功');
     });
@@ -141,7 +159,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('PUT', '/auth/some-endpoint');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.message).toBe('操作成功');
     });
@@ -161,7 +181,9 @@ describe('ResponseInterceptor', () => {
         const { mockContext } = createMockContext('POST', path);
         const mockNext = createMockCallHandler(null);
 
-        const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+        const result = await interceptor
+          .intercept(mockContext, mockNext)
+          .toPromise();
         expect(result).toBeDefined();
         expect(result!.message).toBe(`${expected}成功`);
       });
@@ -186,7 +208,9 @@ describe('ResponseInterceptor', () => {
       } as ExecutionContext;
 
       const mockNext = createMockCallHandler(null);
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.message).toBe('查询成功');
     });
@@ -195,7 +219,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('POST', '/api/v1/auth/login');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       // 由于有特殊路由映射，应该优先匹配
       expect(result!.message).toBe('登录成功');
@@ -205,7 +231,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('POST', '/auth/login/');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       // 路径规范化后应该能正确匹配特殊路由
       expect(result!.message).toBe('登录成功');
@@ -217,9 +245,13 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('GET', '/test');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
-      expect(result!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(result!.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
       expect(new Date(result!.timestamp)).toBeInstanceOf(Date);
     });
 
@@ -227,7 +259,9 @@ describe('ResponseInterceptor', () => {
       const { mockContext } = createMockContext('GET', '/api/users/123');
       const mockNext = createMockCallHandler(null);
 
-      const result = await interceptor.intercept(mockContext, mockNext).toPromise();
+      const result = await interceptor
+        .intercept(mockContext, mockNext)
+        .toPromise();
       expect(result).toBeDefined();
       expect(result!.path).toBe('/api/users/123');
     });

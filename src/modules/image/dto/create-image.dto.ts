@@ -41,7 +41,9 @@ export class CreateImageDto {
     enum: ['original', 'jpeg', 'webp', 'avif'],
   })
   @IsOptional()
-  @IsIn(['original', 'jpeg', 'webp', 'avif'], { message: 'format 必须是 original, jpeg, webp, avif 之一' })
+  @IsIn(['original', 'jpeg', 'webp', 'avif'], {
+    message: 'format 必须是 original, jpeg, webp, avif 之一',
+  })
   format?: string;
 
   @ApiProperty({

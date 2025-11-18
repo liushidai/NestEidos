@@ -24,14 +24,19 @@ async function bootstrap() {
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     try {
-      if (validationMode === 'strict' || (!isDevelopment && validationMode !== 'lenient')) {
+      if (
+        validationMode === 'strict' ||
+        (!isDevelopment && validationMode !== 'lenient')
+      ) {
         // 严格模式：验证所有配置
         configValidationService.validateAll();
         logger.log('✅ 严格模式配置验证成功，应用继续启动');
       } else {
         // 宽松模式：只验证关键配置
         const result = configValidationService.validateCritical(isDevelopment);
-        logger.log(`✅ 宽松模式配置验证完成，成功: ${result.success.length}，警告: ${result.warnings.length}`);
+        logger.log(
+          `✅ 宽松模式配置验证完成，成功: ${result.success.length}，警告: ${result.warnings.length}`,
+        );
 
         if (result.warnings.length > 0) {
           logger.warn('⚠️ 部分可选配置验证失败，应用以功能受限模式启动');
@@ -44,20 +49,28 @@ async function bootstrap() {
 
       // 提供详细的错误信息和修复建议
       if (configError.message.includes('数据库配置缺失')) {
-        logger.log('💡 请检查数据库相关环境变量：DB_HOST, DB_USERNAME, DB_PASSWORD, DB_DATABASE');
+        logger.log(
+          '💡 请检查数据库相关环境变量：DB_HOST, DB_USERNAME, DB_PASSWORD, DB_DATABASE',
+        );
       } else if (configError.message.includes('Redis 配置缺失')) {
         logger.log('💡 请检查 Redis 相关环境变量：REDIS_HOST');
       } else if (configError.message.includes('MinIO 配置缺失')) {
-        logger.log('💡 请检查 MinIO 相关环境变量：MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET');
+        logger.log(
+          '💡 请检查 MinIO 相关环境变量：MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET',
+        );
       } else if (configError.message.includes('SECURE_ID_SECRET_KEY')) {
         logger.log('💡 请生成强随机密钥：openssl rand -hex 32');
       } else if (configError.message.includes('认证配置')) {
-        logger.log('💡 请检查认证相关环境变量：AUTH_TOKEN_EXPIRES_IN, AUTH_TOKEN_BYTES_LENGTH 等');
+        logger.log(
+          '💡 请检查认证相关环境变量：AUTH_TOKEN_EXPIRES_IN, AUTH_TOKEN_BYTES_LENGTH 等',
+        );
       }
 
       // 根据环境决定是否允许启动
       if (isDevelopment && validationMode === 'lenient') {
-        logger.warn('⚠️ 开发环境宽松模式：应用将在配置缺失的情况下启动，功能可能受限');
+        logger.warn(
+          '⚠️ 开发环境宽松模式：应用将在配置缺失的情况下启动，功能可能受限',
+        );
       } else {
         logger.error('🛑 生产环境或严格模式：配置验证失败，应用终止启动');
         process.exit(1);
@@ -70,11 +83,13 @@ async function bootstrap() {
     });
 
     // Enable validation pipe
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }));
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
 
     // Apply global response interceptor
     app.useGlobalInterceptors(new ResponseInterceptor());
@@ -98,7 +113,6 @@ async function bootstrap() {
     if (enableSwagger) {
       logger.log(`📖 API 文档地址: http://localhost:${port}/api`);
     }
-
   } catch (error) {
     logger.error('❌ 应用启动过程中发生未预期的错误');
     logger.error(error.message);
@@ -143,4 +157,4 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-bootstrap();
+void bootstrap();

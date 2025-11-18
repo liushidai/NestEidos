@@ -52,7 +52,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    userRepository = module.get(UserRepository) as jest.Mocked<UserRepository>;
+    userRepository = module.get(UserRepository);
 
     // 清除所有 mock 调用记录
     jest.clearAllMocks();
@@ -74,7 +74,9 @@ describe('UserService', () => {
 
       const result = await service.findById('1234567890123456789');
 
-      expect(userRepository.findById).toHaveBeenCalledWith('1234567890123456789');
+      expect(userRepository.findById).toHaveBeenCalledWith(
+        '1234567890123456789',
+      );
       expect(result).toEqual(mockUser);
     });
 
@@ -110,7 +112,9 @@ describe('UserService', () => {
 
       const result = await service.findUsersWithPagination(query);
 
-      expect(userRepository.findUsersWithPagination).toHaveBeenCalledWith(query);
+      expect(userRepository.findUsersWithPagination).toHaveBeenCalledWith(
+        query,
+      );
       expect(result.users[0]).toBeInstanceOf(UserProfileDto);
       expect(result.total).toBe(1);
     });
@@ -130,28 +134,37 @@ describe('UserService', () => {
     it('should throw NotFoundException when user not found', async () => {
       userRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getUserDetailById('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getUserDetailById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('toggleUserStatus', () => {
     it('should toggle user status successfully', async () => {
-      const updatedUser = mockUser as User;
+      const updatedUser = mockUser;
       updatedUser.userStatus = 2;
       userRepository.toggleUserStatus.mockResolvedValue(updatedUser);
 
       const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
       const result = await service.toggleUserStatus('user-id', toggleDto);
 
-      expect(userRepository.toggleUserStatus).toHaveBeenCalledWith('user-id', 2);
+      expect(userRepository.toggleUserStatus).toHaveBeenCalledWith(
+        'user-id',
+        2,
+      );
       expect(result.userStatus).toBe(2);
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      userRepository.toggleUserStatus.mockRejectedValue(new Error('用户不存在'));
+      userRepository.toggleUserStatus.mockRejectedValue(
+        new Error('用户不存在'),
+      );
 
       const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
-      await expect(service.toggleUserStatus('nonexistent', toggleDto)).rejects.toThrow('用户不存在');
+      await expect(
+        service.toggleUserStatus('nonexistent', toggleDto),
+      ).rejects.toThrow('用户不存在');
     });
   });
 
@@ -169,7 +182,10 @@ describe('UserService', () => {
 
       expect(userRepository.findById).toHaveBeenCalledWith('user-id');
       expect(bcrypt.hash).toHaveBeenCalledWith('TempPassword123!', 10);
-      expect(userRepository.resetPassword).toHaveBeenCalledWith('user-id', 'hashedPassword');
+      expect(userRepository.resetPassword).toHaveBeenCalledWith(
+        'user-id',
+        'hashedPassword',
+      );
       expect(result.success).toBe(true);
       expect(result.newPassword).toBe('TempPassword123!');
     });
@@ -183,7 +199,10 @@ describe('UserService', () => {
 
       expect(userRepository.findById).toHaveBeenCalledWith('user-id');
       expect(bcrypt.hash).toHaveBeenCalledWith('CustomPassword123!', 10);
-      expect(userRepository.resetPassword).toHaveBeenCalledWith('user-id', 'hashedPassword');
+      expect(userRepository.resetPassword).toHaveBeenCalledWith(
+        'user-id',
+        'hashedPassword',
+      );
       expect(result.success).toBe(true);
       expect(result.newPassword).toBeUndefined();
     });
@@ -192,14 +211,18 @@ describe('UserService', () => {
       userRepository.findById.mockResolvedValue(null);
 
       const resetDto: ResetPasswordDto = { useDefaultPassword: true };
-      await expect(service.resetUserPassword('nonexistent', resetDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.resetUserPassword('nonexistent', resetDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when no password provided', async () => {
       userRepository.findById.mockResolvedValue(mockUser);
 
       const resetDto: ResetPasswordDto = {};
-      await expect(service.resetUserPassword('user-id', resetDto)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.resetUserPassword('user-id', resetDto),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

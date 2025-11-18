@@ -25,7 +25,7 @@ describe('SystemController', () => {
     }).compile();
 
     controller = module.get<SystemController>(SystemController);
-    configService = module.get(ConfigService) as jest.Mocked<ConfigService>;
+    configService = module.get(ConfigService);
 
     // 设置默认配置值
     mockConfigService.get.mockImplementation((key: string) => {
@@ -50,23 +50,59 @@ describe('SystemController', () => {
   });
 
   describe('getSystemConfig', () => {
-    const expectedSupportedFormats = ['JPEG', 'PNG', 'GIF', 'WEBP', 'AVIF', 'BMP', 'SVG', 'HEIF', 'HEIC'];
+    const expectedSupportedFormats = [
+      'JPEG',
+      'PNG',
+      'GIF',
+      'WEBP',
+      'AVIF',
+      'BMP',
+      'SVG',
+      'HEIF',
+      'HEIC',
+    ];
     const expectedAllowedMimeTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-      'image/webp', 'image/avif', 'image/bmp', 'image/x-ms-bmp',
-      'image/svg+xml', 'image/heif', 'image/heic'
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/avif',
+      'image/bmp',
+      'image/x-ms-bmp',
+      'image/svg+xml',
+      'image/heif',
+      'image/heic',
     ];
     const expectedAllowedExtensions = [
-      'jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'png', 'gif',
-      'webp', 'avif', 'avifs', 'bmp', 'dib', 'svg', 'svgz',
-      'heif', 'hif', 'heic', 'heifs'
+      'jpg',
+      'jpeg',
+      'jfif',
+      'pjpeg',
+      'pjp',
+      'png',
+      'gif',
+      'webp',
+      'avif',
+      'avifs',
+      'bmp',
+      'dib',
+      'svg',
+      'svgz',
+      'heif',
+      'hif',
+      'heic',
+      'heifs',
     ];
 
     it('should return system config with default values', async () => {
       // 使用默认配置
       const result = await controller.getSystemConfig();
 
-      expect(configService.get).toHaveBeenCalledWith('ENABLE_USER_REGISTRATION', true);
+      expect(configService.get).toHaveBeenCalledWith(
+        'ENABLE_USER_REGISTRATION',
+        true,
+      );
       expect(configService.get).toHaveBeenCalledWith('app');
 
       const expectedResult: SystemConfigResponseDto = {
@@ -87,17 +123,19 @@ describe('SystemController', () => {
 
     it('should return system config with custom registration enabled', async () => {
       // 设置自定义配置：开启注册
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: 50 * 1024 * 1024, // 50MB
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: 50 * 1024 * 1024, // 50MB
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -108,17 +146,19 @@ describe('SystemController', () => {
 
     it('should return system config with custom registration disabled', async () => {
       // 设置自定义配置：关闭注册
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return false;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: 200 * 1024 * 1024, // 200MB
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return false;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: 200 * 1024 * 1024, // 200MB
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -130,17 +170,19 @@ describe('SystemController', () => {
     it('should return system config with custom file size limit', async () => {
       // 设置自定义文件大小限制：25MB
       const customFileSize = 25 * 1024 * 1024;
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return false;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: customFileSize,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return false;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: customFileSize,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -150,11 +192,13 @@ describe('SystemController', () => {
 
     it('should handle missing app config gracefully', async () => {
       // 设置app配置为undefined
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') return undefined;
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') return undefined;
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -165,15 +209,17 @@ describe('SystemController', () => {
 
     it('should handle missing upload config gracefully', async () => {
       // 设置upload配置为undefined
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: undefined,
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: undefined,
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -184,17 +230,19 @@ describe('SystemController', () => {
 
     it('should handle zero file size config gracefully', async () => {
       // 设置文件大小为0
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: 0,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: 0,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -222,7 +270,9 @@ describe('SystemController', () => {
       const result = await controller.getSystemConfig();
 
       // 验证MIME类型列表
-      expect(result.allowedMimeTypes).toEqual(expect.arrayContaining(expectedAllowedMimeTypes));
+      expect(result.allowedMimeTypes).toEqual(
+        expect.arrayContaining(expectedAllowedMimeTypes),
+      );
       expect(result.allowedMimeTypes).toContain('image/jpeg');
       expect(result.allowedMimeTypes).toContain('image/png');
       expect(result.allowedMimeTypes).toContain('image/gif');
@@ -235,7 +285,9 @@ describe('SystemController', () => {
       const result = await controller.getSystemConfig();
 
       // 验证扩展名列表
-      expect(result.allowedExtensions).toEqual(expect.arrayContaining(expectedAllowedExtensions));
+      expect(result.allowedExtensions).toEqual(
+        expect.arrayContaining(expectedAllowedExtensions),
+      );
       expect(result.allowedExtensions).toContain('jpg');
       expect(result.allowedExtensions).toContain('jpeg');
       expect(result.allowedExtensions).toContain('png');
@@ -249,17 +301,19 @@ describe('SystemController', () => {
     it('should calculate MB size correctly for large files', async () => {
       // 设置大文件大小：2.5GB
       const largeFileSize = 2.5 * 1024 * 1024 * 1024; // 2.5GB in bytes
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: largeFileSize,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: largeFileSize,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -270,17 +324,19 @@ describe('SystemController', () => {
     it('should calculate MB size correctly for small files', async () => {
       // 设置小文件大小：512KB
       const smallFileSize = 512 * 1024; // 512KB in bytes
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: smallFileSize,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: smallFileSize,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -291,17 +347,19 @@ describe('SystemController', () => {
     it('should handle string file size config', async () => {
       // 设置字符串类型的文件大小（虽然不应该出现，但要测试健壮性）
       const stringFileSize = '52428800'; // 50MB as string
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: stringFileSize as any, // 强制类型转换用于测试
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: stringFileSize as any, // 强制类型转换用于测试
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -315,10 +373,22 @@ describe('SystemController', () => {
 
       // 验证ConfigService调用
       expect(configService.get).toHaveBeenCalledTimes(4);
-      expect(configService.get).toHaveBeenNthCalledWith(1, 'ENABLE_USER_REGISTRATION', true);
+      expect(configService.get).toHaveBeenNthCalledWith(
+        1,
+        'ENABLE_USER_REGISTRATION',
+        true,
+      );
       expect(configService.get).toHaveBeenNthCalledWith(2, 'app');
-      expect(configService.get).toHaveBeenNthCalledWith(3, 'APP_DOMAIN', 'http://localhost:3000');
-      expect(configService.get).toHaveBeenNthCalledWith(4, 'ENABLE_SWAGGER', true);
+      expect(configService.get).toHaveBeenNthCalledWith(
+        3,
+        'APP_DOMAIN',
+        'http://localhost:3000',
+      );
+      expect(configService.get).toHaveBeenNthCalledWith(
+        4,
+        'ENABLE_SWAGGER',
+        true,
+      );
     });
 
     it('should return SystemConfigResponseDto type', async () => {
@@ -352,7 +422,10 @@ describe('SystemController', () => {
     it('should return correct app domain configuration', async () => {
       const result = await controller.getSystemConfig();
 
-      expect(configService.get).toHaveBeenCalledWith('APP_DOMAIN', 'http://localhost:3000');
+      expect(configService.get).toHaveBeenCalledWith(
+        'APP_DOMAIN',
+        'http://localhost:3000',
+      );
       expect(result.appDomain).toBe('http://localhost:3000');
     });
 
@@ -365,19 +438,21 @@ describe('SystemController', () => {
 
     it('should handle custom app domain configuration', async () => {
       // 设置自定义域名
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'APP_DOMAIN') return 'https://api.example.com';
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'ENABLE_SWAGGER') return true;
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: 100 * 1024 * 1024,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'APP_DOMAIN') return 'https://api.example.com';
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'ENABLE_SWAGGER') return true;
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: 100 * 1024 * 1024,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -386,19 +461,21 @@ describe('SystemController', () => {
 
     it('should handle disabled swagger configuration', async () => {
       // 禁用 Swagger
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_SWAGGER') return false;
-        if (key === 'ENABLE_USER_REGISTRATION') return true;
-        if (key === 'APP_DOMAIN') return 'http://localhost:3000';
-        if (key === 'app') {
-          return {
-            upload: {
-              maxFileSize: 100 * 1024 * 1024,
-            },
-          };
-        }
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_SWAGGER') return false;
+          if (key === 'ENABLE_USER_REGISTRATION') return true;
+          if (key === 'APP_DOMAIN') return 'http://localhost:3000';
+          if (key === 'app') {
+            return {
+              upload: {
+                maxFileSize: 100 * 1024 * 1024,
+              },
+            };
+          }
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 
@@ -417,16 +494,20 @@ describe('SystemController', () => {
       });
 
       // 应该抛出异常
-      await expect(controller.getSystemConfig()).rejects.toThrow('Config service error');
+      await expect(controller.getSystemConfig()).rejects.toThrow(
+        'Config service error',
+      );
     });
 
     it('should handle ConfigService returning null for ENABLE_USER_REGISTRATION', async () => {
       // 设置ENABLE_USER_REGISTRATION返回null
-      mockConfigService.get.mockImplementation((key: string, defaultValue?: any) => {
-        if (key === 'ENABLE_USER_REGISTRATION') return null;
-        if (key === 'app') return undefined;
-        return defaultValue;
-      });
+      mockConfigService.get.mockImplementation(
+        (key: string, defaultValue?: any) => {
+          if (key === 'ENABLE_USER_REGISTRATION') return null;
+          if (key === 'app') return undefined;
+          return defaultValue;
+        },
+      );
 
       const result = await controller.getSystemConfig();
 

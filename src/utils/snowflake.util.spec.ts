@@ -38,7 +38,7 @@ describe('SnowflakeUtil', () => {
       }
 
       // 转换为BigInt比较
-      const bigIntIds = ids.map(id => BigInt(id));
+      const bigIntIds = ids.map((id) => BigInt(id));
       for (let i = 1; i < bigIntIds.length; i++) {
         expect(bigIntIds[i]).toBeGreaterThan(bigIntIds[i - 1]);
       }
@@ -106,7 +106,7 @@ describe('SnowflakeUtil', () => {
       const start = Date.now();
       while (Date.now() === start) {
         // 等待时间戳变化
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
       }
 
       // 在新的毫秒内快速生成ID
@@ -143,12 +143,12 @@ describe('SnowflakeUtil', () => {
       for (let i = 0; i < 5; i++) {
         ids.push(snowflake.nextId());
         if (i < 4) {
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
         }
       }
 
       // 验证时间戳递增
-      const timestamps = ids.map(id => (BigInt(id) >> 22n) + 1288834974657n);
+      const timestamps = ids.map((id) => (BigInt(id) >> 22n) + 1288834974657n);
 
       for (let i = 1; i < timestamps.length; i++) {
         expect(timestamps[i]).toBeGreaterThanOrEqual(timestamps[i - 1]);
@@ -213,7 +213,9 @@ describe('SnowflakeUtil', () => {
       // 每秒应该能生成至少10万个ID
       expect(rate).toBeGreaterThan(100000);
 
-      console.log(`生成 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`);
+      console.log(
+        `生成 ${count} 个ID 耗时: ${duration.toFixed(2)}ms, 速率: ${rate.toFixed(0)} ID/s`,
+      );
     });
   });
 });

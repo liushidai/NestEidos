@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { CacheService, TTL_CONFIGS, TTLUtils, CacheKeyUtils } from '../../../cache';
+import {
+  CacheService,
+  TTL_CONFIGS,
+  TTLUtils,
+  CacheKeyUtils,
+} from '../../../cache';
 import { UserQueryDto } from '../dto/user-query.dto';
 
 @Injectable()
@@ -35,7 +40,11 @@ export class UserRepository {
 
       // 缓存结果（24小时）
       if (user) {
-        await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+        await this.cacheService.set(
+          cacheKey,
+          user,
+          TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE),
+        );
       }
 
       return user;
@@ -51,7 +60,11 @@ export class UserRepository {
    */
   async findByUserName(userName: string): Promise<User | null> {
     try {
-      const cacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', userName);
+      const cacheKey = CacheKeyUtils.buildRepositoryKey(
+        'user',
+        'username',
+        userName,
+      );
 
       // 尝试从缓存获取
       const cachedUser = await this.cacheService.get<User>(cacheKey);
@@ -66,7 +79,11 @@ export class UserRepository {
 
       // 缓存结果（24小时）
       if (user) {
-        await this.cacheService.set(cacheKey, user, TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE));
+        await this.cacheService.set(
+          cacheKey,
+          user,
+          TTLUtils.toSeconds(TTL_CONFIGS.USER_CACHE),
+        );
       }
 
       return user;
@@ -86,7 +103,11 @@ export class UserRepository {
 
       // 预先清理用户名缓存，防止创建同名用户时的缓存冲突
       if (savedUser.userName) {
-        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', savedUser.userName);
+        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey(
+          'user',
+          'username',
+          savedUser.userName,
+        );
         await this.cacheService.delete(usernameCacheKey);
         this.logger.debug(`清理用户名缓存: ${savedUser.userName}`);
       }
@@ -119,7 +140,11 @@ export class UserRepository {
       await this.cacheService.delete(idCacheKey);
 
       if (updatedUser.userName) {
-        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey('user', 'username', updatedUser.userName);
+        const usernameCacheKey = CacheKeyUtils.buildRepositoryKey(
+          'user',
+          'username',
+          updatedUser.userName,
+        );
         await this.cacheService.delete(usernameCacheKey);
       }
 
@@ -134,7 +159,13 @@ export class UserRepository {
   /**
    * 分页查询用户列表
    */
-  async findUsersWithPagination(query: UserQueryDto): Promise<{ users: User[]; total: number; page: number; limit: number; totalPages: number }> {
+  async findUsersWithPagination(query: UserQueryDto): Promise<{
+    users: User[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
       const { page, limit, userName, userType, userStatus } = query;
       const skip = (page - 1) * limit;
@@ -142,19 +173,32 @@ export class UserRepository {
       // 构建查询
       let queryBuilder: SelectQueryBuilder<User> = this.userRepository
         .createQueryBuilder('user')
-        .select(['user.id', 'user.userName', 'user.userType', 'user.userStatus', 'user.createdAt', 'user.updatedAt']); // 不包含密码
+        .select([
+          'user.id',
+          'user.userName',
+          'user.userType',
+          'user.userStatus',
+          'user.createdAt',
+          'user.updatedAt',
+        ]); // 不包含密码
 
       // 添加筛选条件
       if (userName) {
-        queryBuilder = queryBuilder.andWhere('user.userName ILIKE :userName', { userName: `%${userName}%` });
+        queryBuilder = queryBuilder.andWhere('user.userName ILIKE :userName', {
+          userName: `%${userName}%`,
+        });
       }
 
       if (userType !== undefined) {
-        queryBuilder = queryBuilder.andWhere('user.userType = :userType', { userType });
+        queryBuilder = queryBuilder.andWhere('user.userType = :userType', {
+          userType,
+        });
       }
 
       if (userStatus !== undefined) {
-        queryBuilder = queryBuilder.andWhere('user.userStatus = :userStatus', { userStatus });
+        queryBuilder = queryBuilder.andWhere('user.userStatus = :userStatus', {
+          userStatus,
+        });
       }
 
       // 获取总数
@@ -169,7 +213,9 @@ export class UserRepository {
 
       const totalPages = Math.ceil(total / limit);
 
-      this.logger.debug(`分页查询用户: page=${page}, limit=${limit}, total=${total}`);
+      this.logger.debug(
+        `分页查询用户: page=${page}, limit=${limit}, total=${total}`,
+      );
 
       return {
         users,

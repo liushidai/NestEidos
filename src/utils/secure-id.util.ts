@@ -28,7 +28,8 @@ export class SecureIdUtil {
   private readonly key: Buffer;
 
   // Base62 字符集
-  private readonly base62Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  private readonly base62Chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
   constructor(private readonly configService: ConfigService) {
     // 从配置服务获取密钥
@@ -50,7 +51,9 @@ export class SecureIdUtil {
 
     // 规范化密钥为32字节：如果密钥不是32字节，则通过SHA256哈希得到32字节
     if (this.key.length !== 32) {
-      this.logger.warn(`Key length is ${this.key.length} bytes, normalizing to 32 bytes via SHA256`);
+      this.logger.warn(
+        `Key length is ${this.key.length} bytes, normalizing to 32 bytes via SHA256`,
+      );
       this.key = crypto.createHash('sha256').update(this.key).digest();
     }
 
@@ -96,7 +99,7 @@ export class SecureIdUtil {
   private feistelEncrypt(id64: bigint): bigint {
     const mask32 = 0xffffffffn;
     let L = (id64 >> 32n) & mask32; // 高32位
-    let R = id64 & mask32;           // 低32位
+    let R = id64 & mask32; // 低32位
 
     // Feistel 轮次
     for (let i = 1; i <= this.rounds; i++) {
@@ -117,7 +120,7 @@ export class SecureIdUtil {
   private feistelDecrypt(p64: bigint): bigint {
     const mask32 = 0xffffffffn;
     let L = (p64 >> 32n) & mask32; // 高32位
-    let R = p64 & mask32;           // 低32位
+    let R = p64 & mask32; // 低32位
 
     // 反向 Feistel 轮次
     for (let i = this.rounds; i >= 1; i--) {
@@ -137,7 +140,9 @@ export class SecureIdUtil {
    */
   public encode(snowflakeId: bigint): string {
     if (typeof snowflakeId !== 'bigint' || snowflakeId < 0n) {
-      throw new BadRequestException('Invalid snowflake ID: must be a non-negative bigint');
+      throw new BadRequestException(
+        'Invalid snowflake ID: must be a non-negative bigint',
+      );
     }
 
     try {
@@ -150,7 +155,10 @@ export class SecureIdUtil {
       // Base62 编码
       return this.base62Encode(permuted);
     } catch (error) {
-      this.logger.error('Failed to encode ID', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        'Failed to encode ID',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw new BadRequestException('Failed to encode secure ID');
     }
   }
@@ -162,17 +170,23 @@ export class SecureIdUtil {
    */
   public decode(encodedId: string): bigint {
     if (!encodedId || typeof encodedId !== 'string') {
-      throw new BadRequestException('Invalid encoded ID: must be a non-empty string');
+      throw new BadRequestException(
+        'Invalid encoded ID: must be a non-empty string',
+      );
     }
 
     // 严格校验：Base62 字符集（优先检查字符集）
     if (!this.isValidBase62(encodedId)) {
-      throw new BadRequestException('Invalid encoded ID: contains invalid Base62 characters');
+      throw new BadRequestException(
+        'Invalid encoded ID: contains invalid Base62 characters',
+      );
     }
 
     // 严格校验：长度限制 1-11 字符
     if (encodedId.length === 0 || encodedId.length > 11) {
-      throw new BadRequestException('Invalid encoded ID: length must be between 1 and 11 characters');
+      throw new BadRequestException(
+        'Invalid encoded ID: length must be between 1 and 11 characters',
+      );
     }
 
     try {
@@ -184,7 +198,10 @@ export class SecureIdUtil {
 
       return original;
     } catch (error) {
-      this.logger.error('Failed to decode ID', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        'Failed to decode ID',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw new BadRequestException('Invalid or corrupted secure ID');
     }
   }
@@ -259,7 +276,7 @@ export class SecureIdUtil {
   public isValidBase62(str: string): boolean {
     if (!str) return false;
 
-    return [...str].every(char => this.base62Chars.includes(char));
+    return [...str].every((char) => this.base62Chars.includes(char));
   }
 
   /**
@@ -275,7 +292,10 @@ export class SecureIdUtil {
       const expectedId = snowflakeId & ((1n << 64n) - 1n);
       return decoded === expectedId;
     } catch (error) {
-      this.logger.error('Encode-decode roundtrip validation failed', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        'Encode-decode roundtrip validation failed',
+        error instanceof Error ? error.stack : String(error),
+      );
       return false;
     }
   }
@@ -294,7 +314,7 @@ export class SecureIdUtil {
    * @returns 编码后的字符串数组
    */
   public encodeBatch(snowflakeIds: bigint[]): string[] {
-    return snowflakeIds.map(id => this.encode(id));
+    return snowflakeIds.map((id) => this.encode(id));
   }
 
   /**
@@ -303,6 +323,6 @@ export class SecureIdUtil {
    * @returns 解码后的雪花 ID 数组
    */
   public decodeBatch(encodedIds: string[]): bigint[] {
-    return encodedIds.map(id => this.decode(id));
+    return encodedIds.map((id) => this.decode(id));
   }
 }

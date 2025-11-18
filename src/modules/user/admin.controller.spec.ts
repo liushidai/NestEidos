@@ -73,7 +73,7 @@ describe('AdminController', () => {
     }).compile();
 
     controller = module.get<AdminController>(AdminController);
-    userService = module.get(UserService) as jest.Mocked<UserService>;
+    userService = module.get(UserService);
 
     jest.clearAllMocks();
   });
@@ -98,9 +98,13 @@ describe('AdminController', () => {
     it('should handle not found user', async () => {
       const userId = 'nonexistent-id';
 
-      mockUserService.getUserDetailById.mockRejectedValue(new NotFoundException('用户不存在'));
+      mockUserService.getUserDetailById.mockRejectedValue(
+        new NotFoundException('用户不存在'),
+      );
 
-      await expect(controller.getUserDetailById(userId)).rejects.toThrow(NotFoundException);
+      await expect(controller.getUserDetailById(userId)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(userService.getUserDetailById).toHaveBeenCalledWith(userId);
     });
   });
@@ -109,7 +113,10 @@ describe('AdminController', () => {
     it('should toggle user status successfully', async () => {
       const userId = 'user-id';
       const toggleDto: ToggleUserStatusDto = { userStatus: 2 };
-      const expectedUser = UserProfileDto.fromUser({ ...mockRegularUser, userStatus: 2 });
+      const expectedUser = UserProfileDto.fromUser({
+        ...mockRegularUser,
+        userStatus: 2,
+      });
 
       const mockRequest = {
         user: mockAdminUser,
@@ -117,9 +124,16 @@ describe('AdminController', () => {
 
       mockUserService.toggleUserStatus.mockResolvedValue(expectedUser);
 
-      const result = await controller.toggleUserStatus(userId, toggleDto, mockRequest);
+      const result = await controller.toggleUserStatus(
+        userId,
+        toggleDto,
+        mockRequest,
+      );
 
-      expect(userService.toggleUserStatus).toHaveBeenCalledWith(userId, toggleDto);
+      expect(userService.toggleUserStatus).toHaveBeenCalledWith(
+        userId,
+        toggleDto,
+      );
       expect(result).toEqual(expectedUser);
     });
 
@@ -130,8 +144,9 @@ describe('AdminController', () => {
         user: { ...mockAdminUser, userId: 'user-id' },
       } as any;
 
-      await expect(controller.toggleUserStatus('user-id', toggleDto, mockRequest))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        controller.toggleUserStatus('user-id', toggleDto, mockRequest),
+      ).rejects.toThrow(BadRequestException);
 
       expect(userService.toggleUserStatus).not.toHaveBeenCalled();
     });
@@ -144,10 +159,13 @@ describe('AdminController', () => {
         user: mockAdminUser,
       } as any;
 
-      mockUserService.toggleUserStatus.mockRejectedValue(new NotFoundException('用户不存在'));
+      mockUserService.toggleUserStatus.mockRejectedValue(
+        new NotFoundException('用户不存在'),
+      );
 
-      await expect(controller.toggleUserStatus(userId, toggleDto, mockRequest))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        controller.toggleUserStatus(userId, toggleDto, mockRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -170,9 +188,16 @@ describe('AdminController', () => {
         user: mockAdminUser,
       } as any;
 
-      const result = await controller.resetUserPassword(userId, resetDto, mockRequest);
+      const result = await controller.resetUserPassword(
+        userId,
+        resetDto,
+        mockRequest,
+      );
 
-      expect(userService.resetUserPassword).toHaveBeenCalledWith(userId, resetDto);
+      expect(userService.resetUserPassword).toHaveBeenCalledWith(
+        userId,
+        resetDto,
+      );
       expect(result).toEqual(expectedResult);
     });
 
@@ -194,9 +219,16 @@ describe('AdminController', () => {
         user: mockAdminUser,
       } as any;
 
-      const result = await controller.resetUserPassword(userId, resetDto, mockRequest);
+      const result = await controller.resetUserPassword(
+        userId,
+        resetDto,
+        mockRequest,
+      );
 
-      expect(userService.resetUserPassword).toHaveBeenCalledWith(userId, resetDto);
+      expect(userService.resetUserPassword).toHaveBeenCalledWith(
+        userId,
+        resetDto,
+      );
       expect(result).toEqual(expectedResult);
     });
 
@@ -206,14 +238,17 @@ describe('AdminController', () => {
         newPassword: 'CustomPassword123!',
       };
 
-      mockUserService.resetUserPassword.mockRejectedValue(new NotFoundException('用户不存在'));
+      mockUserService.resetUserPassword.mockRejectedValue(
+        new NotFoundException('用户不存在'),
+      );
 
       const mockRequest = {
         user: mockAdminUser,
       } as any;
 
-      await expect(controller.resetUserPassword(userId, resetDto, mockRequest))
-        .rejects.toThrow(NotFoundException);
+      await expect(
+        controller.resetUserPassword(userId, resetDto, mockRequest),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should handle bad request for missing password', async () => {
@@ -221,15 +256,16 @@ describe('AdminController', () => {
       const resetDto: ResetPasswordDto = {};
 
       mockUserService.resetUserPassword.mockRejectedValue(
-        new BadRequestException('必须提供新密码或使用默认密码选项')
+        new BadRequestException('必须提供新密码或使用默认密码选项'),
       );
 
       const mockRequest = {
         user: mockAdminUser,
       } as any;
 
-      await expect(controller.resetUserPassword(userId, resetDto, mockRequest))
-        .rejects.toThrow(BadRequestException);
+      await expect(
+        controller.resetUserPassword(userId, resetDto, mockRequest),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

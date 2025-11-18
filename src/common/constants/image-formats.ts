@@ -122,16 +122,17 @@ export const IMAGE_FORMATS: Record<string, ImageFormat> = {
 /**
  * 所有允许的图片 MIME 类型（扁平化数组）
  */
-export const ALLOWED_IMAGE_MIME_TYPES: string[] = Object.values(IMAGE_FORMATS)
-  .flatMap(format => format.mimeAliases);
+export const ALLOWED_IMAGE_MIME_TYPES: string[] = Object.values(
+  IMAGE_FORMATS,
+).flatMap((format) => format.mimeAliases);
 
 /**
  * 支持的文件扩展名集合
  */
 export const ALLOWED_IMAGE_EXTENSIONS: Set<string> = new Set(
   Object.values(IMAGE_FORMATS)
-    .flatMap(format => format.extensions)
-    .map(ext => ext.toLowerCase())
+    .flatMap((format) => format.extensions)
+    .map((ext) => ext.toLowerCase()),
 );
 
 /**
@@ -139,8 +140,8 @@ export const ALLOWED_IMAGE_EXTENSIONS: Set<string> = new Set(
  */
 export const MIME_TO_FORMAT: Map<string, string> = new Map(
   Object.entries(IMAGE_FORMATS).flatMap(([formatName, format]) =>
-    format.mimeAliases.map(mime => [mime, formatName])
-  )
+    format.mimeAliases.map((mime) => [mime, formatName]),
+  ),
 );
 
 /**
@@ -148,8 +149,8 @@ export const MIME_TO_FORMAT: Map<string, string> = new Map(
  */
 export const EXTENSION_TO_FORMAT: Map<string, string> = new Map(
   Object.entries(IMAGE_FORMATS).flatMap(([formatName, format]) =>
-    format.extensions.map(ext => [ext.toLowerCase(), formatName])
-  )
+    format.extensions.map((ext) => [ext.toLowerCase(), formatName]),
+  ),
 );
 
 /**
@@ -169,7 +170,9 @@ export function isSupportedExtension(extension: string): boolean {
 /**
  * 获取 MIME 类型对应的图片格式信息
  */
-export function getImageFormatByMimeType(mimeType: string): ImageFormat | undefined {
+export function getImageFormatByMimeType(
+  mimeType: string,
+): ImageFormat | undefined {
   const formatName = MIME_TO_FORMAT.get(mimeType);
   return formatName ? IMAGE_FORMATS[formatName] : undefined;
 }
@@ -177,7 +180,9 @@ export function getImageFormatByMimeType(mimeType: string): ImageFormat | undefi
 /**
  * 获取扩展名对应的图片格式信息
  */
-export function getImageFormatByExtension(extension: string): ImageFormat | undefined {
+export function getImageFormatByExtension(
+  extension: string,
+): ImageFormat | undefined {
   const formatName = EXTENSION_TO_FORMAT.get(extension.toLowerCase());
   return formatName ? IMAGE_FORMATS[formatName] : undefined;
 }
@@ -185,11 +190,16 @@ export function getImageFormatByExtension(extension: string): ImageFormat | unde
 /**
  * 检查 MIME 类型与扩展名是否匹配
  */
-export function isMimeTypeMatchingExtension(mimeType: string, extension: string): boolean {
+export function isMimeTypeMatchingExtension(
+  mimeType: string,
+  extension: string,
+): boolean {
   const formatByMime = getImageFormatByMimeType(mimeType);
   const formatByExt = getImageFormatByExtension(extension);
 
-  return formatByMime && formatByExt ? formatByMime.mime === formatByExt.mime : false;
+  return formatByMime && formatByExt
+    ? formatByMime.mime === formatByExt.mime
+    : false;
 }
 
 /**
@@ -197,8 +207,8 @@ export function isMimeTypeMatchingExtension(mimeType: string, extension: string)
  */
 export function getBitmapMimeTypes(): string[] {
   return Object.values(IMAGE_FORMATS)
-    .filter(format => format.meta?.isBitmap)
-    .flatMap(format => format.mimeAliases);
+    .filter((format) => format.meta?.isBitmap)
+    .flatMap((format) => format.mimeAliases);
 }
 
 /**
@@ -206,8 +216,8 @@ export function getBitmapMimeTypes(): string[] {
  */
 export function getVectorMimeTypes(): string[] {
   return Object.values(IMAGE_FORMATS)
-    .filter(format => format.meta?.isVector)
-    .flatMap(format => format.mimeAliases);
+    .filter((format) => format.meta?.isVector)
+    .flatMap((format) => format.mimeAliases);
 }
 
 /**
@@ -215,6 +225,6 @@ export function getVectorMimeTypes(): string[] {
  */
 export function getTransparentMimeTypes(): string[] {
   return Object.values(IMAGE_FORMATS)
-    .filter(format => format.meta?.supportsTransparency)
-    .flatMap(format => format.mimeAliases);
+    .filter((format) => format.meta?.supportsTransparency)
+    .flatMap((format) => format.mimeAliases);
 }
