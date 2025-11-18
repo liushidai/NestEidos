@@ -61,6 +61,7 @@ export class HealthController {
       database: 'disconnected' as 'connected' | 'disconnected',
       memory: null as any,
       environment: process.env.NODE_ENV || 'unknown',
+      error: undefined as string | undefined,
     };
 
     try {
