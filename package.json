@@ -7,6 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "build:healthcheck": "tsc src/healthcheck.ts --outDir dist --target es2020 --module commonjs",
+    "postbuild": "npm run build:healthcheck",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

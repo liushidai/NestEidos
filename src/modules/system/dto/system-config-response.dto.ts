@@ -90,4 +90,20 @@ export class SystemConfigResponseDto {
   })
   @Allow()
   enableSwagger: boolean;
+
+  @ApiProperty({
+    description: '健康检查接口状态（独立于Swagger配置）',
+    example: true,
+    type: 'boolean',
+  })
+  @Allow()
+  healthCheckAvailable: boolean;
+
+  @ApiProperty({
+    description: '健康检查接口地址',
+    example: '/health',
+    type: 'string',
+  })
+  @Allow()
+  healthCheckEndpoint: string;
 }

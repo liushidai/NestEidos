@@ -19,7 +19,8 @@ export class SystemController {
   @Get('config')
   @ApiOperation({
     summary: '获取系统配置信息',
-    description: '获取当前系统的关键配置信息，包括注册开关、上传限制、Swagger状态等，无需认证'
+    description: '获取当前系统的关键配置信息，包括注册开关、上传限制、Swagger状态等，无需认证。' +
+                   '注意：健康检查接口位于 /health，独立于 Swagger 配置状态。'
   })
   @ApiResponse({
     status: 200,
@@ -55,6 +56,8 @@ export class SystemController {
       allowedExtensions,
       appDomain,
       enableSwagger,
+      healthCheckAvailable: true, // 健康检查接口始终可用
+      healthCheckEndpoint: '/health', // 固定路径
     };
   }
 }

@@ -78,6 +78,8 @@ describe('SystemController', () => {
         allowedExtensions: expectedAllowedExtensions,
         appDomain: 'http://localhost:3000',
         enableSwagger: true,
+        healthCheckAvailable: true,
+        healthCheckEndpoint: '/health',
       };
 
       expect(result).toEqual(expectedResult);
@@ -331,6 +333,8 @@ describe('SystemController', () => {
       expect(result).toHaveProperty('allowedExtensions');
       expect(result).toHaveProperty('appDomain');
       expect(result).toHaveProperty('enableSwagger');
+      expect(result).toHaveProperty('healthCheckAvailable');
+      expect(result).toHaveProperty('healthCheckEndpoint');
 
       // 验证数据类型
       expect(typeof result.enableUserRegistration).toBe('boolean');
@@ -338,6 +342,8 @@ describe('SystemController', () => {
       expect(typeof result.maxFileSizeMB).toBe('number');
       expect(typeof result.appDomain).toBe('string');
       expect(typeof result.enableSwagger).toBe('boolean');
+      expect(typeof result.healthCheckAvailable).toBe('boolean');
+      expect(typeof result.healthCheckEndpoint).toBe('string');
       expect(Array.isArray(result.supportedFormats)).toBe(true);
       expect(Array.isArray(result.allowedMimeTypes)).toBe(true);
       expect(Array.isArray(result.allowedExtensions)).toBe(true);

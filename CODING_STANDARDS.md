@@ -62,6 +62,8 @@ src/
 │       ├── repositories/         # 数据访问层 (Repository)
 │       ├── dto/                  # 数据传输对象
 │       ├── controllers/          # 控制器
+│       │   ├── health.controller.ts    # 健康检查控制器（独立于Swagger）
+│       │   └── system.controller.ts   # 系统配置控制器
 │       └── {module}.module.ts    # 模块定义
 ├── services/                     # 核心服务
 │   ├── storage.service.ts        # 对象存储服务
@@ -109,7 +111,8 @@ modules/{module-name}/
 │   ├── protected-{entity-name}.controller.ts  # 需要认证的接口
 │   ├── {entity-name}-upload.controller.ts     # 上传接口 (如适用)
 │   ├── {entity-name}-access.controller.ts     # 公开访问接口 (如适用)
-│   └── admin.controller.ts               # 管理员专用接口
+│   ├── admin.controller.ts               # 管理员专用接口
+│   └── health.controller.ts        # 健康检查接口（仅system模块）
 ├── services/                     # 业务逻辑服务
 │   └── {entity-name}.service.ts
 ├── guards/                       # 权限守卫 (如适用)
@@ -2161,6 +2164,332 @@ Closes #123
 
 ---
 
+## 健康检查规范
+
+### 1. 健康检查架构
+
+#### 1.1 设计原则
+
+**独立性**: 健康检查接口完全独立于 Swagger 配置状态，确保在任何情况下都能正常工作。
+
+**可靠性**: 不依赖外部服务状态，提供应用自身的运行状态检查。
+
+**全面性**: 提供多种类型的健康检查，满足不同监控系统的需求。
+
+#### 1.2 接口设计
+
+健康检查模块位于 `src/modules/system/health.controller.ts`，提供四个独立的健康检查端点：
+
+```typescript
+@ApiTags('健康检查')
+@Controller('health')
+export class HealthController {
+  @Get()                    // GET /health - 基础健康检查
+  @Get('detailed')          // GET /health/detailed - 详细健康信息
+  @Get('liveness')          // GET /health/liveness - Kubernetes 存活检查
+  @Get('readiness')         // GET /health/readiness - Kubernetes 就绪检查
+}
+```
+
+### 2. 健康检查端点
+
+#### 2.1 基础健康检查 `/health`
+
+**用途**: Docker 健康检查、基础监控系统
+
+**响应格式**:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "environment": "production",
+  "version": "1.0.0",
+  "timestamp": "2023-01-01T00:00:00.000Z",
+  "uptime": 3600,
+  "memory": {
+    "heapUsed": 45.2,
+    "heapTotal": 128.0,
+    "unit": "MB"
+  }
+}
+```
+
+#### 2.2 详细健康检查 `/health/detailed`
+
+**用途**: 详细监控、故障诊断、性能分析
+
+**响应格式**:
+```json
+{
+  "status": "healthy",
+  "environment": "production",
+  "version": "1.0.0",
+  "timestamp": "2023-01-01T00:00:00.000Z",
+  "uptime": 3600,
+  "services": {
+    "database": {
+      "status": "connected",
+      "responseTime": 15,
+      "unit": "ms"
+    },
+    "redis": {
+      "status": "connected",
+      "responseTime": 2,
+      "unit": "ms"
+    },
+    "memory": {
+      "heapUsed": 45.2,
+      "heapTotal": 128.0,
+      "unit": "MB"
+    }
+  },
+  "system": {
+    "nodeVersion": "v18.17.0",
+    "platform": "linux",
+    "arch": "x64",
+    "pid": 12345
+  }
+}
+```
+
+#### 2.3 Kubernetes 存活检查 `/health/liveness`
+
+**用途**: Kubernetes Liveness Probe
+
+**响应格式**:
+```json
+{
+  "status": "alive",
+  "timestamp": "2023-01-01T00:00:00.000Z",
+  "uptime": 3600
+}
+```
+
+#### 2.4 Kubernetes 就绪检查 `/health/readiness`
+
+**用途**: Kubernetes Readiness Probe
+
+**响应格式**:
+```json
+{
+  "status": "ready",
+  "database": "connected",
+  "timestamp": "2023-01-01T00:00:00.000Z",
+  "uptime": 3600
+}
+```
+
+### 3. 实现规范
+
+#### 3.1 控制器实现
+
+```typescript
+@ApiTags('健康检查')
+@Controller('health')
+export class HealthController {
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Get()
+  @ApiOperation({
+    summary: '应用健康检查',
+    description: '检查应用和数据库连接状态，用于 Docker 健康检查和监控系统',
+  })
+  @ApiResponse({ status: 200, description: '服务正常' })
+  async getHealth() {
+    const startTime = Date.now();
+
+    // 检查数据库连接
+    await this.dataSource.query('SELECT 1');
+    const dbResponseTime = Date.now() - startTime;
+
+    // 获取内存使用情况
+    const memUsage = process.memoryUsage();
+    const memory = {
+      heapUsed: Math.round((memUsage.heapUsed / 1024 / 1024) * 100) / 100,
+      heapTotal: Math.round((memUsage.heapTotal / 1024 / 1024) * 100) / 100,
+      unit: 'MB',
+    };
+
+    return {
+      status: 'healthy',
+      database: 'connected',
+      environment: this.configService.get('NODE_ENV', 'development'),
+      version: process.env.npm_package_version || '1.0.0',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      memory,
+    };
+  }
+}
+```
+
+#### 3.2 错误处理
+
+```typescript
+async getHealth() {
+  try {
+    // 健康检查逻辑
+    return healthStatus;
+  } catch (error) {
+    // 记录错误日志
+    this.logger.error(`健康检查失败: ${error.message}`);
+
+    // 返回错误状态
+    throw new InternalServerErrorException({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+```
+
+### 4. Docker 配置
+
+#### 4.1 Dockerfile 健康检查
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { \
+    process.exit(res.statusCode >= 200 && res.statusCode < 300 ? 0 : 1) \
+  }).on('error', () => process.exit(1))"
+```
+
+#### 4.2 健康检查参数说明
+
+- `interval=30s`: 每30秒检查一次
+- `timeout=3s`: 单次检查超时时间3秒
+- `start-period=5s`: 容器启动后5秒开始检查
+- `retries=3`: 连续失败3次标记为不健康
+
+### 5. Kubernetes 配置
+
+#### 5.1 Liveness Probe
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health/liveness
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+```
+
+#### 5.2 Readiness Probe
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health/readiness
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+```
+
+### 6. 监控集成
+
+#### 6.1 Prometheus 集成
+
+```typescript
+// 可选：添加 Prometheus 指标
+import { Counter, Histogram, register } from 'prom-client';
+
+const httpRequestsTotal = new Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status'],
+});
+
+const httpRequestDuration = new Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route'],
+});
+```
+
+#### 6.2 日志记录
+
+```typescript
+// 结构化日志记录
+this.logger.log(`健康检查完成: status=${status}, db_time=${dbResponseTime}ms`);
+this.logger.debug(`内存使用: heap=${memory.heapUsed}MB, total=${memory.heapTotal}MB`);
+```
+
+### 7. 测试规范
+
+#### 7.1 单元测试
+
+```typescript
+describe('HealthController', () => {
+  describe('getHealth', () => {
+    it('should return healthy status when all services are ok', async () => {
+      mockDataSource.query.mockResolvedValue(undefined);
+
+      const result = await controller.getHealth();
+
+      expect(result.status).toBe('healthy');
+      expect(result.database).toBe('connected');
+      expect(result.memory.unit).toBe('MB');
+    });
+
+    it('should throw when database connection fails', async () => {
+      mockDataSource.query.mockRejectedValue(new Error('DB Error'));
+
+      await expect(controller.getHealth()).rejects.toThrow();
+    });
+  });
+});
+```
+
+#### 7.2 集成测试
+
+```typescript
+describe('Health Check (e2e)', () => {
+  it('/health (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/health')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.status).toBe('healthy');
+        expect(res.body.timestamp).toMatchISOFormat();
+      });
+  });
+});
+```
+
+### 8. 最佳实践
+
+#### 8.1 性能考虑
+
+- **快速响应**: 健康检查应在100ms内完成
+- **轻量级**: 避免复杂查询，使用简单的 `SELECT 1`
+- **缓存状态**: 对于耗时检查，考虑短期缓存结果
+
+#### 8.2 安全考虑
+
+- **公开访问**: 健康检查端点无需认证
+- **信息脱敏**: 不在健康检查中暴露敏感信息
+- **频率限制**: 防止恶意频繁请求
+
+#### 8.3 可靠性
+
+- **独立模块**: 不依赖业务逻辑，独立运行
+- **优雅降级**: 部分服务故障时仍能返回基本信息
+- **详细日志**: 记录所有健康检查结果和错误
+
+### 9. 版本历史
+
+- **v2.1.0**: 添加独立健康检查模块，支持 Docker 和 Kubernetes 部署
+
+---
+
 ## 总结
 
 本文档定义了 NestEidos 项目的完整开发规范，涵盖代码组织、架构设计、安全实践、测试要求等各个方面。所有开发者在提交代码前应确保符合这些规范，以保证项目的代码质量和架构一致性。
@@ -2177,6 +2506,7 @@ Closes #123
 
 - **v1.0.0**: 初始版本，定义基础规范
 - **v2.0.0**: 更新 Repository 层规范，完善缓存设计，添加图片处理规范
+- **v2.1.0**: 添加独立健康检查模块，支持 Docker 和 Kubernetes 部署
 
 ---
 

@@ -1,0 +1,135 @@
+# Node modules
+node_modules
+npm-debug.log*
+
+# Build artifacts
+dist
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+docs
+*.md
+
+# Tests
+test
+tests
+**/*.spec.ts
+**/*.test.ts
+jest.config.js
+tsconfig.json
+.eslintrc.js
+.prettierrc
+
+# GitHub
+.github
+
+# Docker
+docker-compose*.yml
+
+# CI/CD
+.github
+
+# Development files
+*.config.js
+*.config.ts
+prettier.config.js
+tsconfig*.json
+
+# Development scripts
+scripts
+*.sh
+Makefile
+
+# Cache and temporary files
+.cache
+.parcel-cache
+.tmp
+temp
+tmp
+
+# IDE and editor specific
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Lock files (keep package-lock.json)
+# package-lock.json
+
+# Keep LICENSE file
+# LICENSE
+
+# Keep important configuration files
+# .env.example

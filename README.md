@@ -304,6 +304,10 @@ CREATE TABLE image (
 | 模块 | 端点 | 方法 | 认证 | 描述 |
 |------|------|------|------|------|
 | **系统** | `/system/config` | GET | ❌ | 获取系统配置信息 |
+| **健康检查** | `/health` | GET | ❌ | 应用健康状态检查 |
+| **健康检查** | `/health/detailed` | GET | ❌ | 详细健康状态检查 |
+| **健康检查** | `/health/liveness` | GET | ❌ | Kubernetes 存活检查 |
+| **健康检查** | `/health/readiness` | GET | ❌ | Kubernetes 就绪检查 |
 
 | 模块 | 端点 | 方法 | 认证 | 描述 |
 |------|------|------|------|------|
@@ -425,37 +429,77 @@ npm run build
 npm run start:prod
 ```
 
-### Docker 部署 (可选)
+### Docker 部署
 
-如需使用 Docker 部署，可创建以下 `Dockerfile`：
+项目已配置完整的 Docker 支持和 CI/CD 流水线。
 
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-RUN npm run build
-
-EXPOSE 3000
-
-CMD ["npm", "run", "start:prod"]
-```
+#### 镜像拉取和运行
 
 ```bash
-# 构建镜像
-docker build -t nest-eidos .
+# 拉取最新镜像
+docker pull ghcr.io/liushidai/nest-eidos:latest
+
+# 或拉取指定版本
+docker pull ghcr.io/liushidai/nest-eidos:v1.0.0
 
 # 运行容器
 docker run -d \
   --name nest-eidos \
   -p 3000:3000 \
   --env-file ./.env \
-  nest-eidos
+  ghcr.io/liushidai/nest-eidos:latest
 ```
+
+#### 本地构建
+
+```bash
+# 构建镜像
+docker build -t nest-eidos .
+
+# 多架构构建
+docker buildx build --platform linux/amd64,linux/arm64 -t nest-eidos .
+```
+
+#### 镜像特性
+
+- 🏗️ **多阶段构建**: 优化镜像大小，分离构建和运行环境
+- 🔒 **安全配置**: 非 root 用户运行，健康检查
+- 🏷️ **多架构支持**: 支持 AMD64 和 ARM64 架构
+- 📊 **自动构建**: GitHub Actions 自动 CI/CD 流水线
+- 🔍 **安全扫描**: 集成 Trivy 漏洞扫描
+- ❤️ **健康检查**: 独立的健康检查接口，不依赖 Swagger 状态
+
+#### 健康检查接口
+
+项目提供独立的健康检查接口，支持 Docker 和 Kubernetes 部署：
+
+```bash
+# 基础健康检查
+GET /health
+
+# 详细健康信息
+GET /health/detailed
+
+# Kubernetes Liveness Probe
+GET /health/liveness
+
+# Kubernetes Readiness Probe
+GET /health/readiness
+```
+
+**健康检查特性**:
+- ✅ **独立运行**: 不依赖 Swagger 配置状态
+- ✅ **数据库检查**: 自动检测数据库连接状态
+- ✅ **系统信息**: 包含内存使用、系统版本等详细信息
+- ✅ **响应时间**: 快速响应，支持监控系统集成
+- ✅ **多端点支持**: 支持不同类型的健康检查需求
+
+#### CI/CD 流水线
+
+- **自动触发**: push 到 main 分支或创建 tag 时自动构建
+- **多环境支持**: 支持 staging 和 production 部署
+- **安全检查**: 代码质量测试、安全审计、漏洞扫描
+- **自动发布**: 创建 tag 时自动生成 GitHub Release
 
 ### 生产环境配置
 
