@@ -14,7 +14,9 @@ interface MockDataSource {
 }
 
 // 创建一个更简单的 mock 对象
-const createMockDataSource = (isInitialized: boolean = true): MockDataSource => ({
+const createMockDataSource = (
+  isInitialized: boolean = true,
+): MockDataSource => ({
   isInitialized,
   query: jest.fn(),
   // 添加其他必要的属性
@@ -63,14 +65,16 @@ describe('HealthController', () => {
         environment: 'test',
         version: expect.any(String),
       });
-      expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(result.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
       expect(result.uptime).toBeGreaterThanOrEqual(0);
       expect(result.memory).toBeDefined();
     });
 
     it('should return unhealthy status when database is disconnected', async () => {
       // Mock database connection failure
-      mockDataSource.query!.mockRejectedValue(new Error('Connection failed'));
+      mockDataSource.query.mockRejectedValue(new Error('Connection failed'));
 
       await expect(controller.getHealth()).rejects.toThrow();
     });
@@ -91,7 +95,8 @@ describe('HealthController', () => {
         ],
       }).compile();
 
-      const uninitializedController = module.get<HealthController>(HealthController);
+      const uninitializedController =
+        module.get<HealthController>(HealthController);
 
       const result = await uninitializedController.getHealth();
 
@@ -131,7 +136,7 @@ describe('HealthController', () => {
     it('should include database response time', async () => {
       // Mock query with a small delay to simulate response time
       mockDataSource.query.mockImplementation(async () => {
-        await new Promise(resolve => setTimeout(resolve, 5)); // 5ms delay
+        await new Promise((resolve) => setTimeout(resolve, 5)); // 5ms delay
         return undefined;
       });
 
@@ -168,7 +173,9 @@ describe('HealthController', () => {
       expect(result).toMatchObject({
         status: 'alive',
       });
-      expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(result.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
       expect(result.uptime).toBeGreaterThanOrEqual(0);
     });
   });
@@ -183,11 +190,13 @@ describe('HealthController', () => {
         status: 'ready',
         database: 'connected',
       });
-      expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(result.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+      );
     });
 
     it('should return not_ready status when database is disconnected', async () => {
-      mockDataSource.query!.mockRejectedValue(new Error('Connection failed'));
+      mockDataSource.query.mockRejectedValue(new Error('Connection failed'));
 
       await expect(controller.getReadiness()).rejects.toThrow();
     });
@@ -208,7 +217,8 @@ describe('HealthController', () => {
         ],
       }).compile();
 
-      const uninitializedController = module.get<HealthController>(HealthController);
+      const uninitializedController =
+        module.get<HealthController>(HealthController);
 
       await expect(uninitializedController.getReadiness()).rejects.toThrow();
     });

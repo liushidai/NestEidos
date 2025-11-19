@@ -53,7 +53,7 @@ export interface ImageFileFilterOptions {
 export function createSimplifiedImageFileFilter(
   options: ImageFileFilterOptions,
 ) {
-  const { maxSize, strict = true } = options;
+  const { strict = true } = options;
 
   return (
     req: Request,
@@ -75,9 +75,6 @@ export function createSimplifiedImageFileFilter(
 
       // 3. 扩展名白名单检查（基于文件名声明）
       if (!ALLOWED_IMAGE_EXTENSIONS.has(extension)) {
-        const supportedExts = Array.from(ALLOWED_IMAGE_EXTENSIONS)
-          .sort()
-          .join(', ');
         return callback(new UnsupportedFileTypeError(extension), false);
       }
 

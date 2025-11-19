@@ -83,7 +83,7 @@ export class TTLUtils {
       case TTLUnit.DAYS:
         return config.value * 86400;
       default:
-        throw new Error(`Unsupported TTL unit: ${config.unit}`);
+        throw new Error(`Unsupported TTL unit: ${String(config.unit)}`);
     }
   }
 

@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { memoryStorage } from 'multer';
@@ -39,9 +40,11 @@ export class ImageUploadInterceptor implements NestInterceptor {
     });
   }
 
-  intercept(context: ExecutionContext, next: CallHandler): any {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     // 创建拦截器实例并调用
-    const interceptor = new (this.fileInterceptor as any)();
+    const interceptor = new (this.fileInterceptor as new (
+      ...args: any[]
+    ) => any)();
     return interceptor.intercept(context, next);
   }
 
@@ -56,7 +59,7 @@ export class ImageUploadInterceptor implements NestInterceptor {
       // 尝试修复编码问题
       // Multer 在 Windows 上可能使用 latin1 编码处理文件名
       return Buffer.from(fileName, 'latin1').toString('utf8');
-    } catch (error) {
+    } catch {
       // 如果解码失败，返回原始文件名
       return fileName;
     }

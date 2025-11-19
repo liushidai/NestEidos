@@ -55,10 +55,12 @@ interface RedisConfigOptions {
         // 连接到 Redis
         try {
           await client.connect();
-          return client as any;
+          return client as RedisClientType;
         } catch (error) {
           console.error('Redis connection failed:', error);
-          throw new Error(`Redis连接失败: ${error instanceof Error ? error.message : String(error)}`);
+          throw new Error(
+            `Redis连接失败: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       },
     },

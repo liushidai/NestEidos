@@ -58,7 +58,9 @@ export class ConfigValidationService {
       this.validateDatabaseConfig();
       result.success.push('数据库配置');
     } catch (error) {
-      result.failed.push(`数据库配置: ${error.message}`);
+      result.failed.push(
+        `数据库配置: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     // Redis 配置是必需的
@@ -66,7 +68,7 @@ export class ConfigValidationService {
       this.validateRedisConfig();
       result.success.push('Redis配置');
     } catch (error) {
-      result.failed.push(`Redis配置: ${error.message}`);
+      result.failed.push(`Redis配置: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // 其他配置根据 skipOptional 参数决定是否验证
@@ -75,21 +77,21 @@ export class ConfigValidationService {
         this.validateMinioConfig();
         result.success.push('MinIO配置');
       } catch (error) {
-        result.warnings.push(`MinIO配置: ${error.message}`);
+        result.warnings.push(`MinIO配置: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       try {
         this.validateSecureIdConfig();
         result.success.push('安全ID配置');
       } catch (error) {
-        result.warnings.push(`安全ID配置: ${error.message}`);
+        result.warnings.push(`安全ID配置: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       try {
         this.validateAuthConfig();
         result.success.push('认证配置');
       } catch (error) {
-        result.warnings.push(`认证配置: ${error.message}`);
+        result.warnings.push(`认证配置: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -250,7 +252,7 @@ export class ConfigValidationService {
         // 默认当作 hex 处理
         keyBuffer = Buffer.from(secretKey, 'hex');
       }
-    } catch (error) {
+    } catch {
       throw new Error(
         `❌ SECURE_ID_SECRET_KEY 格式无效: 无法解析为 hex 或 base64 格式`,
       );

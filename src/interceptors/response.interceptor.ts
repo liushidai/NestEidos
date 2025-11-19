@@ -24,7 +24,7 @@ export class ResponseInterceptor<T>
         code: response.statusCode || 200,
         message: this.getSuccessMessage(
           request.method,
-          request.route?.path || request.url,
+          request.route?.path ?? request.url,
         ),
         data,
         timestamp: new Date().toISOString(),
